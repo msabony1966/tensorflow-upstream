@@ -43,7 +43,7 @@ Status KernelThunk::Initialize(const GpuExecutable& executable,
     loader_spec_.reset(new se::MultiKernelLoaderSpec(args_.size()));
     loader_spec_->AddCudaPtxInMemory(executable.ptx(), kernel_name_);
 
-    if (!executable.cubin().empty()) {
+    if (!executable.binary().empty()) {
       loader_spec_->AddCudaCubinInMemory(
           reinterpret_cast<const char*>(executable.cubin().data()),
           kernel_name_);

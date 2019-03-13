@@ -765,7 +765,7 @@ def tf_additional_binary_deps():
             "//tensorflow/stream_executor:rocm_platform",
             "//tensorflow/core/platform/default/build_config:rocm",
         ],
-    ) + [
+    )  + [
         # TODO(allenl): Split these out into their own shared objects (they are
         # here because they are shared between contrib/ op shared objects and
         # core).

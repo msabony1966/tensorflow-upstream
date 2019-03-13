@@ -25,6 +25,7 @@ limitations under the License.
 #include "tensorflow/compiler/xla/service/hlo_module.h"
 #include "tensorflow/compiler/xla/service/hlo_opcode.h"
 #include "tensorflow/compiler/xla/service/llvm_ir/llvm_util.h"
+#include "tensorflow/compiler/xla/service/llvm_ir/llvm_target_features.h"
 #include "tensorflow/compiler/xla/shape_util.h"
 #include "tensorflow/compiler/xla/util.h"
 #include "tensorflow/compiler/xla/window_util.h"
@@ -177,6 +178,35 @@ bool IsReductionToVector(const HloInstruction& reduce) {
                  input->shape()));
 }
 
+llvm::Value* EmitDeviceFunctionCall(
+    const string& callee_name, absl::Span<llvm::Value* const> operands,
+    absl::Span<const PrimitiveType> input_types, PrimitiveType output_type,
+    absl::Span<const llvm::Attribute::AttrKind> attributes,
+    llvm::IRBuilder<>* ir_builder, llvm::Module* module) {
+  std::vector<llvm::Type*> ir_input_types;
+  for (PrimitiveType input_type : input_types) {
+    ir_input_types.push_back(
+        llvm_ir::PrimitiveTypeToIrType(input_type, module));
+  }
+  llvm::FunctionType* callee_type = llvm::FunctionType::get(
+      llvm_ir::PrimitiveTypeToIrType(output_type, module),  // Return type.
+      ir_input_types,                                        // Parameter types.
+      false);  // No variadic arguments.
+
+  // Declares the callee if it is not declared already.
+  llvm::Function* callee = llvm::dyn_cast<llvm::Function>(
+      ir_builder->GetInsertBlock()->getModule()->getOrInsertFunction(
+          llvm_ir::AsStringRef(callee_name), callee_type).getCallee());
+
+
+
+  for (auto attribute : attributes) {
+    callee->addFnAttr(attribute);
+  }
+
+  return ir_builder->CreateCall(callee, llvm_ir::AsArrayRef(operands));
+}
+
 // This emits a device-side call to
 // "i32 vprintf(i8* fmt, arguments_type* arguments)" in the driver; see
 // http://docs.nvidia.com/cuda/ptx-writers-guide-to-interoperability/index.html#system-calls
@@ -206,18 +236,28 @@ llvm::Value* EmitPrintf(absl::string_view fmt,
        arguments_ptr});
 }
 
-llvm::Value* EmitFullWarpShuffleDown(llvm::Value* value, llvm::Value* offset,
-                                     llvm::IRBuilder<>* builder) {
+llvm::Value* EmitFullWarpShuffleDown(
+    llvm::Value* value, llvm::Value* offset,
+    llvm_ir::LLVMTargetIRBuilder& llvm_target_ir_builder, 
+    llvm::Module* module
+
+) {
+  llvm::IRBuilder<>* builder = llvm_target_ir_builder.builder();
   int bit_width = value->getType()->getPrimitiveSizeInBits();
   llvm::Value* all_warps_mask = builder->getInt32(-1);
 
   // Special case for efficiency
   if (value->getType()->isFloatTy() && bit_width == 32) {
-    return llvm_ir::EmitCallToIntrinsic(
-        llvm::Intrinsic::nvvm_shfl_sync_down_f32,
-        {all_warps_mask, value, offset, builder->getInt32(kWarpSize - 1)}, {},
-        builder);
+    llvm::Value* value_as_int = builder->CreateBitCast(value, builder->getIntNTy(bit_width));
+    llvm::Value*  result = EmitDeviceFunctionCall(
+        "__ockl_readuplane_i32",
+        {value_as_int, offset},
+        {S32, S32}, S32, {}, builder, module);
+
+    llvm::Value* result_as_float = builder->CreateBitCast(result, value->getType());
+    return result_as_float;
   }
+
 
   // We must split values wider than 32 bits as the "shfl" instruction operates
   // on 32-bit values.
@@ -230,11 +270,10 @@ llvm::Value* EmitFullWarpShuffleDown(llvm::Value* value, llvm::Value* offset,
   for (int i = 0; i < num_segments; ++i) {
     x = builder->CreateInsertElement(
         x,
-        llvm_ir::EmitCallToIntrinsic(
-            llvm::Intrinsic::nvvm_shfl_sync_down_i32,
-            {all_warps_mask, builder->CreateExtractElement(x, i), offset,
-             builder->getInt32(kWarpSize - 1)},
-            {}, builder),
+        EmitDeviceFunctionCall("__ockl_readuplane_i32",
+                               {builder->CreateExtractElement(x, i),
+                                offset},
+                               {S32, S32}, S32, {}, builder, module),
         i);
   }
   return builder->CreateBitCast(
@@ -275,16 +314,16 @@ string CudnnConvKindToString(CudnnConvKind kind) {
   }
 }
 
-llvm::Value* IsBlock0Thread0(llvm::IRBuilder<>* b) {
+llvm::Value* IsBlock0Thread0(
+    llvm_ir::LLVMTargetIRBuilder& llvm_target_ir_builder) {
+  llvm::IRBuilder<>* b = llvm_target_ir_builder.builder();
   return b->CreateAnd(
-      b->CreateICmpEQ(
-          b->getInt32(0),
-          llvm_ir::EmitCallToIntrinsic(
-              llvm::Intrinsic::nvvm_read_ptx_sreg_tid_x, {}, {}, b)),
-      b->CreateICmpEQ(
-          b->getInt32(0),
-          llvm_ir::EmitCallToIntrinsic(
-              llvm::Intrinsic::nvvm_read_ptx_sreg_ctaid_x, {}, {}, b)));
+      b->CreateICmpEQ(b->getInt32(0), llvm_ir::EmitCallToTargetIntrinsic(
+                                          llvm_ir::kTHREAD_ID_X, {}, {},
+                                          llvm_target_ir_builder)),
+      b->CreateICmpEQ(b->getInt32(0), llvm_ir::EmitCallToTargetIntrinsic(
+                                          llvm_ir::kBLOCK_ID_X, {}, {},
+                                          llvm_target_ir_builder)));
 }
 
 }  // namespace gpu

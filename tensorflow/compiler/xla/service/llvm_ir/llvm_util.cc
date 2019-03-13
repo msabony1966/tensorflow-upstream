@@ -93,6 +93,20 @@ llvm::CallInst* EmitCallToIntrinsic(
   return b->CreateCall(intrinsic, AsArrayRef(operands));
 }
 
+llvm::CallInst* EmitCallToTargetIntrinsic(
+    TargetIntrinsicEnum intrinsic_en, absl::Span<llvm::Value* const> operands,
+    absl::Span<llvm::Type* const> overloaded_types,
+    LLVMTargetIRBuilder& llvm_target_ir_builder) {
+  llvm::IRBuilder<>* b = llvm_target_ir_builder.builder();
+  llvm::Module* module = ModuleFromIRBuilder(b);
+  llvm::Intrinsic::ID intrinsic_id =
+      llvm_target_ir_builder.GetTargetMachineFeatures()->GetIntrinsicID(
+          intrinsic_en);
+  llvm::Function* intrinsic = llvm::Intrinsic::getDeclaration(
+      module, intrinsic_id, AsArrayRef(overloaded_types));
+  return b->CreateCall(intrinsic, AsArrayRef(operands));
+}
+
 llvm::Value* EmitFloatMax(llvm::Value* lhs_value, llvm::Value* rhs_value,
                           llvm::IRBuilder<>* b) {
   if (b->getFastMathFlags().noNaNs()) {
@@ -704,13 +718,17 @@ llvm::GlobalVariable* GetOrCreateVariableForPhiloxRngState(
   llvm::GlobalVariable* state_ptr =
       module->getNamedGlobal(kPhiloxRngStateVariableName);
   if (!state_ptr) {
-    state_ptr = new llvm::GlobalVariable(
+   state_ptr = new llvm::GlobalVariable(
         /*M=*/*module,
         /*Ty=*/b->getInt64Ty(),
         /*isConstant=*/false,
         /*Linkage=*/llvm::GlobalValue::PrivateLinkage,
         /*Initializer=*/b->getInt64(0),
-        /*Name=*/kPhiloxRngStateVariableName);
+        /*Name=*/kPhiloxRngStateVariableName,
+        /*InsertBefore=*/nullptr,
+        /*TLMode=*/llvm::GlobalValue::NotThreadLocal,
+        /*AddressSpace=*/llvm_ir::kAMDGPUGlobalMemoryAddrSpace,
+        /*isExternallyInitialized=*/false);
   }
   return state_ptr;
 }

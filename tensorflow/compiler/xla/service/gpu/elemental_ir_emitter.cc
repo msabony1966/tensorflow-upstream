@@ -72,7 +72,7 @@ GpuElementalIrEmitter::GpuElementalIrEmitter(
     llvm::IRBuilder<>* b, NestedComputer compute_nested)
     : ElementalIrEmitter(hlo_module_config, module, b),
       hlo_module_config_(hlo_module_config),
-      compute_nested_(std::move(compute_nested)) {}
+      compute_nested_(std::move(compute_nested)){}
 
 StatusOr<llvm::Value*> GpuElementalIrEmitter::EmitLibdeviceMathCall(
     const string& callee_name, absl::Span<llvm::Value* const> operands,
@@ -174,7 +174,8 @@ StatusOr<llvm::Value*> GpuElementalIrEmitter::EmitFloatBinaryOp(
 
   switch (op->opcode()) {
     case HloOpcode::kRemainder: {
-      return EmitLibdeviceMathCall("__nv_fmod", {lhs_value, rhs_value},
+
+      return EmitLibdeviceMathCall("fmod", {lhs_value, rhs_value},
                                    {lhs_input_type, rhs_input_type},
                                    output_type);
     }
@@ -240,18 +241,17 @@ StatusOr<llvm::Value*> GpuElementalIrEmitter::EmitPow(PrimitiveType prim_type,
 
 StatusOr<llvm::Value*> GpuElementalIrEmitter::EmitSqrt(PrimitiveType prim_type,
                                                        llvm::Value* value) {
-  return EmitLibdeviceMathCall("__nv_sqrt", {value}, {prim_type}, prim_type);
+  return EmitLibdeviceMathCall("__ocml_sqrt", {value}, {prim_type}, prim_type);
 }
 
 StatusOr<llvm::Value*> GpuElementalIrEmitter::EmitRsqrt(PrimitiveType prim_type,
                                                         llvm::Value* value) {
-  return EmitLibdeviceMathCall("__nv_rsqrt", {value}, {prim_type}, prim_type);
+  return EmitLibdeviceMathCall("__ocml_rsqrt", {value}, {prim_type}, prim_type);
 }
 
-StatusOr<llvm::Value*> GpuElementalIrEmitter::EmitAtan2(PrimitiveType prim_type,
-                                                        llvm::Value* lhs,
-                                                        llvm::Value* rhs) {
-  return EmitLibdeviceMathCall("__nv_atan2", {lhs, rhs}, {prim_type, prim_type},
+StatusOr<llvm::Value*> GpuElementalIrEmitter::EmitAtan2(
+    PrimitiveType prim_type, llvm::Value* lhs, llvm::Value* rhs) {
+  return EmitLibdeviceMathCall("__ocml_atan2", {lhs, rhs}, {prim_type, prim_type},
                                prim_type);
 }
 
@@ -273,12 +273,12 @@ StatusOr<llvm::Value*> GpuElementalIrEmitter::EmitTanh(PrimitiveType prim_type,
 
 StatusOr<llvm::Value*> GpuElementalIrEmitter::EmitRoundNearestAfz(
     PrimitiveType prim_type, llvm::Value* value) {
-  // Use libdevice __nv_round instead of llvm.round. This is to workaround a
-  // bug in the PTX backend, which implements llvm.round with PTX cvt.rni.
-  // When the llvm.round is fixed, we may still want to use __nv_round here as
-  // expanding the non-trivial implementation early while inlining allows better
-  // optimizations.
-  return EmitLibdeviceMathCall("__nv_round", {value}, {prim_type}, prim_type);
+    // Use libdevice __nv_round instead of llvm.round. This is to workaround a
+    // bug in the PTX backend, which implements llvm.round with PTX cvt.rni.
+    // When the llvm.round is fixed, we may still want to use __nv_round here as
+    // expanding the non-trivial implementation early while inlining allows
+    // better optimizations.
+    return EmitLibdeviceMathCall("__ocml_round", {value}, {prim_type}, prim_type);
 }
 
 llvm::Value* GpuElementalIrEmitter::EmitDeviceFunctionCall(
