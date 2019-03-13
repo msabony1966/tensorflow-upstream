@@ -36,9 +36,9 @@ REGISTER_SYCL_KERNEL(uint64);
 
 #endif  // TENSORFLOW_USE_SYCL
 
-#if GOOGLE_CUDA || TENSORFLOW_USE_ROCM
+#if GOOGLE_CUDA
 REGISTER8(BinaryOp, GPU, "LeftShift", functor::left_shift, int8, int16, int32,
           int64, uint8, uint16, uint32, uint64);
-#endif  // GOOGLE_CUDA || TENSORFLOW_USE_ROCM
+#endif  // GOOGLE_CUDA
 
 }  // namespace tensorflow

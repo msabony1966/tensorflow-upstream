@@ -110,11 +110,6 @@ class MatrixTriangularSolveOpTest(test.TestCase):
 
   @test_util.run_deprecated_v1
   def testSolveComplex(self):
-
-    if test.is_built_with_rocm() :
-      self.skipTest("TRSM operation for complex datatype not yet supported in ROCm")
-      return
-
     # 1x1 matrix, single rhs.
     matrix = np.array([[0.1 + 1j * 0.1]])
     rhs0 = np.array([[1. + 1j]])
@@ -141,11 +136,6 @@ class MatrixTriangularSolveOpTest(test.TestCase):
 
   @test_util.run_deprecated_v1
   def testSolveBatchComplex(self):
-
-    if test.is_built_with_rocm() :
-      self.skipTest("TRSM operation for complex datatype not yet supported in ROCm")
-      return
-
     matrix = np.array([[1., 2.], [3., 4.]]).astype(np.complex64)
     matrix += 1j * matrix
     rhs = np.array([[1., 0., 1.], [0., 1., 1.]]).astype(np.complex64)
@@ -177,6 +167,7 @@ class MatrixTriangularSolveOpTest(test.TestCase):
       with self.assertRaises(ValueError):
         self._verifySolve(matrix, rhs, batch_dims=[2, 3])
 
+  @test_util.run_deprecated_v1
   def testNotInvertible(self):
     # The input should be invertible.
     # The matrix is singular because it has a zero on the diagonal.

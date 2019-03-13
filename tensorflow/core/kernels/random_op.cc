@@ -510,7 +510,7 @@ TF_CALL_int64(REGISTER_INT);
 #undef REGISTER
 #undef REGISTER_INT
 
-#if GOOGLE_CUDA || TENSORFLOW_USE_ROCM
+#if GOOGLE_CUDA
 
 #define REGISTER(TYPE)                                                         \
   REGISTER_KERNEL_BUILDER(                                                     \
@@ -561,7 +561,7 @@ TF_CALL_int64(REGISTER_INT);
 #undef REGISTER
 #undef REGISTER_INT
 
-#endif  // GOOGLE_CUDA || TENSORFLOW_USE_ROCM
+#endif  // GOOGLE_CUDA
 
 #ifdef TENSORFLOW_USE_SYCL
 

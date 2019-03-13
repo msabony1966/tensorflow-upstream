@@ -111,6 +111,7 @@ def _run_loop_model():
 
 class RunMetadataTest(test.TestCase):
 
+  @test_util.run_deprecated_v1
   def testGPU(self):
     if not test.is_gpu_available(cuda_only=True):
       return
@@ -124,10 +125,9 @@ class RunMetadataTest(test.TestCase):
 
     ret = _extract_node(run_meta, 'MatMul')
     self.assertEqual(len(ret['gpu:0']), 1)
-    if not test.is_built_with_rocm() :
-      # stream tracing is currently not available in tensorflow with ROCm
-      self.assertEqual(len(ret['gpu:0/stream:all']), 1, '%s' % run_meta)
-    
+    self.assertEqual(len(ret['gpu:0/stream:all']), 1, '%s' % run_meta)
+
+  @test_util.run_deprecated_v1
   def testAllocationHistory(self):
     if not test.is_gpu_available(cuda_only=True):
       return
@@ -230,10 +230,8 @@ class RunMetadataTest(test.TestCase):
       for node in ret['gpu:0']:
         total_cpu_execs += node.op_end_rel_micros
 
-        if not test.is_built_with_rocm() :
-          # stream tracing is currently not available in tensorflow with ROCm
-          self.assertGreaterEqual(len(ret['gpu:0/stream:all']), 4, '%s' % run_meta)
-          
+      self.assertGreaterEqual(len(ret['gpu:0/stream:all']), 4, '%s' % run_meta)
+
 
 if __name__ == '__main__':
   test.main()

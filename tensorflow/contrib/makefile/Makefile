@@ -439,7 +439,6 @@ $(MARCH_OPTION) \
 -Itensorflow/core/kernels \
 -I$(MAKEFILE_DIR)/downloads/cub \
 -I$(MAKEFILE_DIR)/downloads/cub/cub_archive/cub/device \
--Ithird_party/toolchains/gpus/cuda \
 -I$(JETPACK)/cuda/include \
 -I$(JETPACK) \
 -I$(JETPACK)/cuDNN/aarch64 \
@@ -630,6 +629,9 @@ BENCHMARK_NAME := $(BINDIR)benchmark
 
 CORE_CC_ALL_SRCS := \
 $(ABSL_CC_SRCS) \
+tensorflow/c/c_api.cc \
+tensorflow/c/kernels.cc \
+tensorflow/c/tf_status_helper.cc \
 $(wildcard tensorflow/core/*.cc) \
 $(wildcard tensorflow/core/common_runtime/*.cc) \
 $(wildcard tensorflow/core/framework/*.cc) \
@@ -694,7 +696,7 @@ ifeq ($(BUILD_FOR_TEGRA),1)
 CORE_CC_ALL_SRCS := $(CORE_CC_ALL_SRCS) \
 tensorflow/core/kernels/concat_lib_gpu.cc \
 tensorflow/core/kernels/cuda_solvers.cc \
-tensorflow/core/kernels/dnn_pooling_gpu.cc \
+tensorflow/core/kernels/cudnn_pooling_gpu.cc \
 tensorflow/core/kernels/dense_update_functor.cc \
 tensorflow/core/kernels/fractional_avg_pool_op.cc \
 tensorflow/core/kernels/fractional_max_pool_op.cc \

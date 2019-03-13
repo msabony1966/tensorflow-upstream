@@ -827,6 +827,7 @@ class AlgorithmConfig {
   absl::optional<AlgorithmDesc> algorithm_;
   absl::optional<AlgorithmDesc> algorithm_no_scratch_;
   absl::optional<size_t> scratch_size_;
+
 };
 
 // Describes a local response normalization (LRN). LRN is used e.g. in
@@ -2541,6 +2542,7 @@ class DnnSupport {
       dnn::ProfileResult* output_profile_result) {
     return false;
   }
+
  protected:
   // Returns whether status is 'ok', and potentially logs the error.
   static bool IsStatusOk(const port::Status& status, bool report_error);

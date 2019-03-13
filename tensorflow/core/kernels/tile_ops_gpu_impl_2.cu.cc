@@ -13,7 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
-#if GOOGLE_CUDA || TENSORFLOW_USE_ROCM
+#if GOOGLE_CUDA
 #include "tensorflow/core/kernels/tile_ops_gpu_impl.h"
 DEFINE_TILE_OPS(2)
-#endif  // GOGLE_CUDA || TENSORFLOW_USE_ROCM
+#endif  // GOGLE_CUDA

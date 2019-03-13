@@ -2366,6 +2366,8 @@ class StructuredFunctionWrapper(object):
     else:
       defun_kwargs.update({"func_name": func_name})
 
+      # TODO(b/124254153): Enable autograph once the overhead is low enough.
+      # TODO(mdan): Make sure autograph recurses into _wrapper_helper when on.
       @eager_function.defun_with_attributes(
           input_signature=[
               tensor_spec.TensorSpec(input_shape, input_type)  # pylint: disable=g-complex-comprehension
@@ -2373,6 +2375,7 @@ class StructuredFunctionWrapper(object):
                   self._input_structure._flat_shapes,
                   self._input_structure._flat_types)
           ],
+          autograph=False,
           attributes=defun_kwargs)
       def wrapper_fn(*args):  # pylint: disable=missing-docstring
         ret = _wrapper_helper(*args)
@@ -2388,6 +2391,15 @@ class StructuredFunctionWrapper(object):
 
       _warn_if_collections(transformation_name, self._function.graph,
                            initial_length)
+
+      outer_graph_seed = ops.get_default_graph().seed
+      if outer_graph_seed and self._function.graph.seed == outer_graph_seed:
+        if self._function.graph._seed_used:
+          warnings.warn(
+              "Seed %s from outer graph might be getting used by function %s,"
+              " if you have not provided any seed to the random op. "
+              "Explicitly set the seed in the function if this is not "
+              "the intended behavior." % (outer_graph_seed, func_name))
   # pylint: enable=protected-access
 
   @property

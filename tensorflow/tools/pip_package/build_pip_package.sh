@@ -132,6 +132,7 @@ function prepare_src() {
   popd > /dev/null
   cp -R $RUNFILES/third_party/eigen3 ${TMPDIR}/third_party
 
+  cp tensorflow/virtual_root.__init__.py ${TMPDIR}
   cp tensorflow/tools/pip_package/MANIFEST.in ${TMPDIR}
   cp tensorflow/tools/pip_package/README ${TMPDIR}
   cp tensorflow/tools/pip_package/setup.py ${TMPDIR}
@@ -154,6 +155,59 @@ function build_wheel() {
   fi
 
   pushd ${TMPDIR} > /dev/null
+
+  # In order to break the circular dependency between tensorflow and
+  # tensorflow_estimator which forces us to do a multi-step release, we are
+  # creating a virtual pip package called tensorflow and moving all the tf code
+  # into another pip called tensorflow_core. Then estimator can depend on
+  # tensorflow_core (both import tensorflow and import tensorflow_core will work
+  # but it's recommended to use import tensorflow_core to be future proof) and
+  # tensorflow_core and tensorflow_estimator can be released at will and only
+  # when they are at a release-able point we can just do a single release for
+  # the virtual tensorflow package.
+  # At the moment, we are doing all these changes in the following two blocks:
+  #
+  #   * move code from tensorflow to tensorflow_core and change imports so that
+  #     code on the new directory is imported (this needs a few sed changes
+  #     to convert extra changes back to the original code, see inline comments
+  #     on the first block below)
+  #   * create the virtual pip package: create folder and __init__.py file
+  #
+  # This is transparent to internal code or to code not using the pip packages,
+  # so the only concerns here are from failures that might occur in the pip
+  # world:
+  #
+  #   * Adding a new file which contains tensorflow on the same line as import
+  #     but not needing that tensorflow to be renamed to tensorflow_core: in
+  #     this case, we just need to add a reverse sed below the for loop, like
+  #     the one we have fr _pywrap_tensorflow and for the keras import
+  #   * Needing more specialized code in the virtual pip's __init__.py: we just
+  #     need to change the virtual_root.__init__.py file to include that code
+  #   * Needing additional version constraints on the virtual pip: that is not
+  #     supported at the moment, but I hope to move to the next step of the
+  #     split before we need these constraints (I don't foresee any such
+  #     constraints being needed)
+  ## Setup for tensorflow_core internal module
+  mv tensorflow tensorflow_core
+  pushd tensorflow_core > /dev/null
+  for f in `find . -name "*.py"`; do
+    sed -i -e "/import/ s/tensorflow/tensorflow_core/" $f
+  done
+  # The above for loop does one extra replacement where it should not, fix it here
+  sed -i -e "/import/ s/_pywrap_tensorflow_core/_pywrap_tensorflow/" python/pywrap_tensorflow_internal.py
+  # We need to have keras from tensorflow for tests but from tensorflow_core for pip
+  sed -i -e "s/tensorflow.python.keras/tensorflow_core.python.keras/" __init__.py
+  # TODO(mihaimaruseac): Not removing these results in AttributeErrors during import so we have this hack
+  # I don't see a future change where we would have to remove more internal modules
+  sed -i -e "s/del python/pass/" -e "s/del core/pass/" __init__.py
+  popd > /dev/null
+
+  # Now, create the virtual pip package
+  mkdir tensorflow
+  pushd tensorflow > /dev/null
+  mv ../virtual_root.__init__.py __init__.py
+  popd > /dev/null
+
   rm -f MANIFEST
   echo $(date) : "=== Building wheel"
   "${PYTHON_BIN_PATH:-python}" setup.py bdist_wheel ${PKG_NAME_FLAG} >/dev/null
@@ -178,7 +232,6 @@ function usage() {
   echo "    --project_name <name> set project name to name"
   echo "    --gpu                 build tensorflow_gpu"
   echo "    --gpudirect           build tensorflow_gpudirect"
-  echo "    --rocm                build tensorflow_rocm"
   echo "    --nightly_flag        build tensorflow nightly"
   echo ""
   exit 1
@@ -188,7 +241,6 @@ function main() {
   PKG_NAME_FLAG=""
   PROJECT_NAME=""
   GPU_BUILD=0
-  ROCM_BUILD=0
   NIGHTLY_BUILD=0
   SRCDIR=""
   DSTDIR=""
@@ -203,8 +255,6 @@ function main() {
       GPU_BUILD=1
     elif [[ "$1" == "--gpudirect" ]]; then
       PKG_NAME_FLAG="--project_name tensorflow_gpudirect"
-    elif [[ "$1" == "--rocm" ]]; then
-      ROCM_BUILD=1
     elif [[ "$1" == "--project_name" ]]; then
       shift
       if [[ -z "$1" ]]; then
@@ -250,14 +300,10 @@ function main() {
     PKG_NAME_FLAG="--project_name ${PROJECT_NAME}"
   elif [[ ${NIGHTLY_BUILD} == "1" && ${GPU_BUILD} == "1" ]]; then
     PKG_NAME_FLAG="--project_name tf_nightly_gpu"
-  elif [[ ${NIGHTLY_BUILD} == "1" && ${ROCM_BUILD} == "1" ]]; then
-    PKG_NAME_FLAG="--project_name tf_nightly_rocm"
   elif [[ ${NIGHTLY_BUILD} == "1" ]]; then
     PKG_NAME_FLAG="--project_name tf_nightly"
   elif [[ ${GPU_BUILD} == "1" ]]; then
     PKG_NAME_FLAG="--project_name tensorflow_gpu"
-  elif [[ ${ROCM_BUILD} == "1" ]]; then
-    PKG_NAME_FLAG="--project_name tensorflow_rocm"
   fi
 
   build_wheel "$SRCDIR" "$DSTDIR" "$PKG_NAME_FLAG"

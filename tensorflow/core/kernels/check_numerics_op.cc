@@ -26,21 +26,16 @@ limitations under the License.
 #include "tensorflow/core/framework/tensor.h"
 #include "tensorflow/core/framework/types.h"
 
-#if GOOGLE_CUDA || TENSORFLOW_USE_ROCM
-#include "tensorflow/core/common_runtime/gpu/gpu_event_mgr.h"
-#endif  // GOOGLE_CUDA || TENSORFLOW_USE_ROCM
-
 #if GOOGLE_CUDA
+#include "tensorflow/core/common_runtime/gpu/gpu_event_mgr.h"
 #include "tensorflow/core/platform/cuda.h"
-#elif TENSORFLOW_USE_ROCM
-#include "tensorflow/core/platform/rocm.h"
-#endif
+#endif  // GOOGLE_CUDA
 namespace tensorflow {
 
 typedef Eigen::ThreadPoolDevice CPUDevice;
 typedef Eigen::GpuDevice GPUDevice;
 
-#if GOOGLE_CUDA || TENSORFLOW_USE_ROCM
+#if GOOGLE_CUDA
 template <typename T>
 struct CheckNumericsLaunch {
   void Run(const GPUDevice& d, const T* data, int size,
@@ -110,7 +105,7 @@ class CheckNumericsOp<CPUDevice, T> : public OpKernel {
   static const int kNaNBit = 0x02;
 };
 
-#if GOOGLE_CUDA || TENSORFLOW_USE_ROCM
+#if GOOGLE_CUDA
 // Partial specialization for GPU
 template <typename T>
 class CheckNumericsOp<GPUDevice, T> : public AsyncOpKernel {
@@ -150,7 +145,7 @@ class CheckNumericsOp<GPUDevice, T> : public AsyncOpKernel {
     stream->ThenMemset32(&abnormal_detected_ptr, 0,
                          abnormal_detected.flat<int>().size() * sizeof(int));
 
-    // Call the GPU kernels for the numerical checks
+    // Call the Cuda kernels for the numerical checks
     const Device& d = context->eigen_device<Device>();
     CheckNumericsLaunch<T>().Run(d, input.data(), input.size(),
                                  abnormal_detected.flat<int>().data());
@@ -172,21 +167,15 @@ class CheckNumericsOp<GPUDevice, T> : public AsyncOpKernel {
                          abnormal_detected_ptr,
                          abnormal_detected_size * sizeof(int))
             .ok(),
-        errors::Internal("GPU memcpy from device to host failed"), done);
+        errors::Internal("cudaMemcpy from device to host failed"), done);
 
     // We have observed crashes on some network stacks when not holding
     // this tensor reference.
     TensorReference abnormal_detected_ref(abnormal_detected);
     auto check_cb = [this, stream, abnormal_detected_ref,
                      abnormal_detected_host, context, done]() {
-      // ROCM TODO: figure out a better way for this
-#if GOOGLE_CUDA
       se::cuda::ScopedActivateExecutorContext scoped_activation{
           stream->parent()};
-#elif TENSORFLOW_USE_ROCM
-      se::rocm::ScopedActivateExecutorContext scoped_activation{
-          stream->parent()};
-#endif
       auto abnormal_detected_host_flat = abnormal_detected_host.flat<int>();
       int is_nan = abnormal_detected_host_flat(0);
       int is_inf = abnormal_detected_host_flat(1);
@@ -223,7 +212,7 @@ class CheckNumericsOp<GPUDevice, T> : public AsyncOpKernel {
  private:
   string message_;
 };
-#endif  // GOOGLE_CUDA || TENSORFLOW_USE_ROCM
+#endif  // GOOGLE_CUDA
 
 }  // namespace
 
@@ -236,7 +225,7 @@ TF_CALL_bfloat16(REGISTER_CPU_KERNEL);
 TF_CALL_float(REGISTER_CPU_KERNEL);
 TF_CALL_double(REGISTER_CPU_KERNEL);
 
-#if GOOGLE_CUDA || TENSORFLOW_USE_ROCM
+#if GOOGLE_CUDA
 REGISTER_KERNEL_BUILDER(
     Name("CheckNumerics").Device(DEVICE_GPU).TypeConstraint<Eigen::half>("T"),
     CheckNumericsOp<GPUDevice, Eigen::half>);
@@ -246,6 +235,6 @@ REGISTER_KERNEL_BUILDER(
 REGISTER_KERNEL_BUILDER(
     Name("CheckNumerics").Device(DEVICE_GPU).TypeConstraint<double>("T"),
     CheckNumericsOp<GPUDevice, double>);
-#endif  // GOOGLE_CUDA || TENSORFLOW_USE_ROCM
+#endif  // GOOGLE_CUDA
 
 }  // namespace tensorflow

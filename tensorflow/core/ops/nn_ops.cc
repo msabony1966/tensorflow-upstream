@@ -827,6 +827,7 @@ REGISTER_OP("MaxPoolWithArgmax")
     .Attr("strides: list(int) >= 4")
     .Attr("Targmax: {int32, int64} = DT_INT64")
     .Attr(GetPaddingAttrString())
+    .Attr("include_batch_in_index: bool = false")
     .Input("input: T")
     .Output("output: T")
     .Output("argmax: Targmax")
@@ -841,6 +842,7 @@ REGISTER_OP("MaxPoolGradWithArgmax")
     .Attr("ksize: list(int) >= 4")
     .Attr("strides: list(int) >= 4")
     .Attr(GetPaddingAttrString())
+    .Attr("include_batch_in_index: bool = false")
     .Attr("Targmax: {int32, int64}")
     .Input("input: T")
     .Input("grad: T")
@@ -855,6 +857,7 @@ REGISTER_OP("MaxPoolGradGradWithArgmax")
     .Attr("ksize: list(int) >= 4")
     .Attr("strides: list(int) >= 4")
     .Attr(GetPaddingAttrString())
+    .Attr("include_batch_in_index: bool = false")
     .Attr("Targmax: {int32, int64}")
     .Input("input: T")
     .Input("grad: T")
@@ -2560,6 +2563,7 @@ REGISTER_OP("QuantizedConv2DAndRequantize")
     .Attr("strides: list(int)")
     .Attr(GetPaddingAttrString())
     .Attr("dilations: list(int) = [1, 1, 1, 1]")
+    .Attr("padding_list: list(int) = []")
     .SetShapeFn([](InferenceContext* c) {
       TF_RETURN_IF_ERROR(shape_inference::Conv2DShape(c));
       ShapeHandle unused;
@@ -2592,6 +2596,7 @@ REGISTER_OP("QuantizedConv2DWithBias")
     .Attr("strides: list(int)")
     .Attr(GetPaddingAttrString())
     .Attr("dilations: list(int) = [1, 1, 1, 1]")
+    .Attr("padding_list: list(int) = []")
     .SetShapeFn([](InferenceContext* c) {
       TF_RETURN_IF_ERROR(shape_inference::Conv2DShape(c));
       ShapeHandle unused;
@@ -2625,6 +2630,7 @@ REGISTER_OP("QuantizedConv2DWithBiasAndRequantize")
     .Attr("strides: list(int)")
     .Attr(GetPaddingAttrString())
     .Attr("dilations: list(int) = [1, 1, 1, 1]")
+    .Attr("padding_list: list(int) = []")
     .SetShapeFn([](InferenceContext* c) {
       TF_RETURN_IF_ERROR(shape_inference::Conv2DShape(c));
       ShapeHandle unused;
@@ -2657,6 +2663,7 @@ REGISTER_OP("QuantizedConv2DAndRelu")
     .Attr("strides: list(int)")
     .Attr(GetPaddingAttrString())
     .Attr("dilations: list(int) = [1, 1, 1, 1]")
+    .Attr("padding_list: list(int) = []")
     .SetShapeFn([](InferenceContext* c) {
       TF_RETURN_IF_ERROR(shape_inference::Conv2DShape(c));
       ShapeHandle unused;
@@ -2687,6 +2694,7 @@ REGISTER_OP("QuantizedConv2DAndReluAndRequantize")
     .Attr("strides: list(int)")
     .Attr(GetPaddingAttrString())
     .Attr("dilations: list(int) = [1, 1, 1, 1]")
+    .Attr("padding_list: list(int) = []")
     .SetShapeFn([](InferenceContext* c) {
       TF_RETURN_IF_ERROR(shape_inference::Conv2DShape(c));
       ShapeHandle unused;
@@ -2719,6 +2727,7 @@ REGISTER_OP("QuantizedConv2DWithBiasAndRelu")
     .Attr("strides: list(int)")
     .Attr(GetPaddingAttrString())
     .Attr("dilations: list(int) = [1, 1, 1, 1]")
+    .Attr("padding_list: list(int) = []")
     .SetShapeFn([](InferenceContext* c) {
       TF_RETURN_IF_ERROR(shape_inference::Conv2DShape(c));
       ShapeHandle unused;
@@ -2753,6 +2762,7 @@ REGISTER_OP("QuantizedConv2DWithBiasAndReluAndRequantize")
     .Attr("strides: list(int)")
     .Attr(GetPaddingAttrString())
     .Attr("dilations: list(int) = [1, 1, 1, 1]")
+    .Attr("padding_list: list(int) = []")
     .SetShapeFn([](InferenceContext* c) {
       TF_RETURN_IF_ERROR(shape_inference::Conv2DShape(c));
       ShapeHandle unused;
@@ -2787,6 +2797,7 @@ REGISTER_OP("QuantizedConv2DWithBiasSumAndRelu")
     .Attr("strides: list(int)")
     .Attr(GetPaddingAttrString())
     .Attr("dilations: list(int) = [1, 1, 1, 1]")
+    .Attr("padding_list: list(int) = []")
     .SetShapeFn([](InferenceContext* c) {
       TF_RETURN_IF_ERROR(shape_inference::Conv2DShape(c));
       ShapeHandle unused;
@@ -2824,6 +2835,7 @@ REGISTER_OP("QuantizedConv2DWithBiasSumAndReluAndRequantize")
     .Attr("strides: list(int)")
     .Attr(GetPaddingAttrString())
     .Attr("dilations: list(int) = [1, 1, 1, 1]")
+    .Attr("padding_list: list(int) = []")
     .SetShapeFn([](InferenceContext* c) {
       TF_RETURN_IF_ERROR(shape_inference::Conv2DShape(c));
       ShapeHandle unused;
@@ -2863,6 +2875,7 @@ REGISTER_OP("QuantizedConv2DWithBiasSignedSumAndReluAndRequantize")
     .Attr("strides: list(int)")
     .Attr(GetPaddingAttrString())
     .Attr("dilations: list(int) = [1, 1, 1, 1]")
+    .Attr("padding_list: list(int) = []")
     .SetShapeFn([](InferenceContext* c) {
       TF_RETURN_IF_ERROR(shape_inference::Conv2DShape(c));
       ShapeHandle unused;
@@ -2877,317 +2890,5 @@ REGISTER_OP("QuantizedConv2DWithBiasSignedSumAndReluAndRequantize")
       c->set_output(2, c->Scalar());
       return Status::OK();
     });
-
-
-#ifdef TENSORFLOW_USE_ROCM
-
-REGISTER_OP("_ROCmFusedConvolutionBiasActivation")
-
-    .Input("conv_input: T")
-    .Input("filter: T")
-    .Input("bias: T")
-
-    .Output("output: T")
-
-    .Attr("T: {float}")
-    .Attr("strides: list(int)")
-    .Attr("padding: {'SAME', 'VALID'}")
-    .Attr("data_format: {'NHWC', 'NCHW'} = 'NHWC'")
-    .Attr("dilations: list(int) = [1, 1, 1, 1]")
-    .Attr("activation_mode: {'None','Sigmoid','Relu','Relu6','Tanh'} = 'None'")
-
-    .SetShapeFn([](shape_inference::InferenceContext* c) {
-      using shape_inference::ShapeHandle;
-      using shape_inference::DimensionHandle;
-      TF_RETURN_IF_ERROR(shape_inference::Conv2DShape(c));
-
-      string data_format_str;
-      TF_RETURN_IF_ERROR(c->GetAttr("data_format", &data_format_str));
-
-      TensorFormat data_format;
-      FormatFromString(data_format_str, &data_format);
-      FilterTensorFormat filter_format;
-      FilterFormatFromString("HWIO", &filter_format);
-
-      constexpr int num_spatial_dims = 2;
-      const int rank =
-          GetTensorDimsFromSpatialDims(num_spatial_dims, data_format);
-      ShapeHandle filter_shape;
-      TF_RETURN_IF_ERROR(c->WithRank(c->input(1), rank, &filter_shape));
-
-      DimensionHandle output_depth_dim =
-          c->Dim(filter_shape,
-                 GetFilterDimIndex<num_spatial_dims>(filter_format, 'O'));
-      int64 output_depth_dim_val = c->Value(output_depth_dim);
-
-      ShapeHandle bias_shape;
-      // Bias should be a 1-D tensor.
-      TF_RETURN_IF_ERROR(c->WithRank(c->input(2), 1, &bias_shape));
-      DimensionHandle bias_dim = c->Dim(bias_shape, 0);
-      int64 bias_dim_val = c->Value(bias_dim);
-
-      if (output_depth_dim_val != bias_dim_val) {
-        return errors::InvalidArgument(
-            "Output depth dimension (", output_depth_dim_val,
-            ") and bias dimension (", bias_dim_val, ") do not match.");
-      }
-
-      return Status::OK();
-    })
-    .Doc(R"doc(
-    Computes a fused kernel which implements: 
-      Conv2D op, followed by
-      BiasAdd op, followed by
-      any activation op (None, Sigmoid, Relu, Relu6, Tanh)
-    Supports only tensors of type float.
-)doc");
-
-REGISTER_OP("_ROCmFusedBatchNormActivationInference")
-
-    .Input("x: T")
-    .Input("scale: U")
-    .Input("offset: U")
-    .Input("mean: U")
-    .Input("variance: U")
-
-    .Output("activations: T")
-
-    .Attr("T: {half, float}")
-    .Attr("U: {float}")
-    .Attr("epsilon: float = 0.0001")
-    .Attr("data_format: {'NHWC', 'NCHW'} = 'NHWC'")
-    .Attr("activation_mode: {'None','Sigmoid','Relu','Relu6','Tanh'} = 'None'")
-
-    .SetShapeFn([](shape_inference::InferenceContext* c) {
-      using shape_inference::ShapeHandle;
-      using shape_inference::DimensionHandle;
-
-      ShapeHandle x;
-      TF_RETURN_IF_ERROR(c->WithRank(c->input(0), 4, &x));
-
-      string data_format_str;
-      TF_RETURN_IF_ERROR(c->GetAttr("data_format", &data_format_str));
-
-      TensorFormat data_format;
-      FormatFromString(data_format_str, &data_format);
-
-      int channel_dim_index = GetTensorFeatureDimIndex(4, data_format);
-      DimensionHandle channel_dim = c->Dim(x, channel_dim_index);
-
-      // covers scale, offset, mean, variance
-      int number_inputs = 5;
-      for (int i = 1; i < number_inputs; ++i) {
-        ShapeHandle vec;
-        TF_RETURN_IF_ERROR(c->WithRank(c->input(i), 1, &vec));
-        TF_RETURN_IF_ERROR(c->Merge(channel_dim, c->Dim(vec, 0), &channel_dim));
-      }
-
-      ShapeHandle y;
-      TF_RETURN_IF_ERROR(c->ReplaceDim(x, channel_dim_index, channel_dim, &y));
-      c->set_output(0, y);
-
-      return Status::OK();
-    })
-    .Doc(R"doc(
-    Computes a fused kernel which implements: 
-      FusedBatchNorm / FusedBatchNormV2 (inference only), followed by
-      any activation op (None, Sigmoid, Relu, Relu6, Tanh)
-    Supports only tensors of type float, half.
-)doc");
-
-REGISTER_OP("_ROCmFusedBatchNormActivationForward")
-
-    .Input("x: T")
-    .Input("scale: U")
-    .Input("offset: U")
-
-    .Output("activations: T")
-    .Output("batch_mean: U")
-    .Output("batch_variance: U")
-    .Output("saved_mean: U")
-    .Output("saved_variance: U")
-
-    .Attr("T: {half, float}")
-    .Attr("U: {float}")
-    .Attr("epsilon: float = 0.0001")
-    .Attr("data_format: {'NHWC', 'NCHW'} = 'NHWC'")
-    .Attr("activation_mode: {'None','Sigmoid','Relu','Relu6','Tanh'} = 'None'")
-
-    .SetShapeFn([](shape_inference::InferenceContext* c) {
-      using shape_inference::ShapeHandle;
-      using shape_inference::DimensionHandle;
-
-      ShapeHandle x;
-      TF_RETURN_IF_ERROR(c->WithRank(c->input(0), 4, &x));
-
-      string data_format_str;
-      TF_RETURN_IF_ERROR(c->GetAttr("data_format", &data_format_str));
-      TensorFormat data_format;
-      FormatFromString(data_format_str, &data_format);
-
-      int channel_dim_index = GetTensorFeatureDimIndex(4, data_format);
-      DimensionHandle channel_dim = c->Dim(x, channel_dim_index);
-
-      // covers scale, offset
-      int number_inputs = 3;
-      for (int i = 1; i < number_inputs; ++i) {
-        ShapeHandle vec;
-        TF_RETURN_IF_ERROR(c->WithRank(c->input(i), 1, &vec));
-        TF_RETURN_IF_ERROR(c->Merge(channel_dim, c->Dim(vec, 0), &channel_dim));
-      }
-
-      ShapeHandle y;
-      TF_RETURN_IF_ERROR(c->ReplaceDim(x, channel_dim_index, channel_dim, &y));
-      c->set_output(0, y);
-
-      ShapeHandle vector_shape = c->Vector(channel_dim);
-      c->set_output(1, vector_shape);
-      c->set_output(2, vector_shape);
-      c->set_output(3, vector_shape);
-      c->set_output(4, vector_shape);
-
-      return Status::OK();
-    })
-    .Doc(R"doc(
-    Computes a fused kernel which implements: 
-      FusedBatchNorm / FusedBatchNormV2 (training-fwd only), followed by
-      any activation op (None, Sigmoid, Relu, Relu6, Tanh)
-    Supports only tensors of type float, half.
-)doc");
-
-REGISTER_OP("_ROCmFusedBatchNormActivationBackward")
-
-    .Input("y_act_backprop: T")
-    .Input("y_act: T")
-    .Input("x_bn: T")
-    .Input("scale: U")
-    .Input("offset: U")
-    .Input("saved_mean: U")
-    .Input("saved_variance: U")
-
-    .Output("x_bn_backprop: T")
-    .Output("scale_backprop: U")
-    .Output("offset_backprop: U")
-
-    .Attr("T: {half, float}")
-    .Attr("U: {float}")
-    .Attr("epsilon: float = 0.0001")
-    .Attr("data_format: {'NHWC', 'NCHW'} = 'NHWC'")
-    .Attr("activation_mode: {'None','Sigmoid','Relu','Relu6','Tanh'} = 'None'")
-
-    .SetShapeFn([](shape_inference::InferenceContext* c) {
-      using shape_inference::ShapeHandle;
-      using shape_inference::DimensionHandle;
-
-      ShapeHandle y_act_backprop;
-      TF_RETURN_IF_ERROR(c->WithRank(c->input(0), 4, &y_act_backprop));
-
-      string data_format_str;
-      TF_RETURN_IF_ERROR(c->GetAttr("data_format", &data_format_str));
-      TensorFormat data_format;
-      FormatFromString(data_format_str, &data_format);
-
-      int channel_dim_index = GetTensorFeatureDimIndex(4, data_format);
-      DimensionHandle channel_dim = c->Dim(y_act_backprop, channel_dim_index);
-
-      // covers y_act, x_bn
-      for (int i = 1; i < 3; i++) {
-        TF_RETURN_IF_ERROR(
-            c->Merge(c->input(i), y_act_backprop, &y_act_backprop));
-      }
-
-      // covers scale, offset, savd_mean, saved_variance
-      int number_inputs = 7;
-      for (int i = 3; i < number_inputs; ++i) {
-        ShapeHandle vec;
-        TF_RETURN_IF_ERROR(c->WithRank(c->input(i), 1, &vec));
-        TF_RETURN_IF_ERROR(c->Merge(channel_dim, c->Dim(vec, 0), &channel_dim));
-      }
-
-      c->set_output(0, y_act_backprop);
-
-      ShapeHandle vector_shape = c->Vector(channel_dim);
-      c->set_output(1, vector_shape);
-      c->set_output(2, vector_shape);
-
-      return Status::OK();
-    })
-    .Doc(R"doc(
-    Computes a fused kernel which implements: 
-      FusedBatchNorm / FusedBatchNormV2 (training-bwd only), followed by
-      any activation op (None, Sigmoid, Relu, Relu6, Tanh)
-    Supports only tensors of type float, half.
-)doc");
-
-REGISTER_OP("_ROCmFusedAddRelu")
-
-    .Input("x: T")  // input 0 to Add
-    .Input("y: T")  // input 1 to Add
-
-    .Output("activations: T")  // output 0 from Relu
-
-    .Attr("T: {half, float}")
-
-    .SetShapeFn([](shape_inference::InferenceContext* c) {
-      using shape_inference::ShapeHandle;
-      using shape_inference::DimensionHandle;
-
-      ShapeHandle x = c->input(0);
-      ShapeHandle y = c->input(1);
-
-      // if either the shape of x or y is not known, then
-      if (!c->RankKnown(x) || !c->RankKnown(y)) {
-        // then set the shape of z to unknown
-        c->set_output(0, c->UnknownShape());
-      } else {
-        // else
-        // check that the shape of x and y matches
-        // and set the shape of z to be that of x
-
-        ShapeHandle z;
-        TF_RETURN_IF_ERROR(c->Merge(x, y, &z));
-        c->set_output(0, z);
-      }
-
-      return Status::OK();
-    })
-    .Doc(R"doc(
-    Computes a fused kernel which implements: 
-      Add op (element-wise), followed by
-      Relu Op
-    Supports only tensors of type {half, float}.
-)doc");
-
-REGISTER_OP("_ROCmFusedAddNReluGrad")
-
-    .Input("inputs: N * T")  // inputs to AddN
-    .Input("features: T")    // input 1 to ReluGrad
-
-    .Output("backprops: T")  // output 0 from ReluGrad
-
-    .Attr("T: {half, float}")
-    .Attr("N: int >= 1")
-
-    .SetShapeFn([](shape_inference::InferenceContext* c) {
-      using shape_inference::ShapeHandle;
-      using shape_inference::DimensionHandle;
-
-      ShapeHandle out = c->input(0);
-      for (int i = 1; i < c->num_inputs(); i++) {
-        TF_RETURN_IF_ERROR(c->Merge(c->input(i), out, &out));
-      }
-
-      c->set_output(0, out);
-
-      return Status::OK();
-    })
-    .Doc(R"doc(
-    Computes a fused kernel which implements: 
-      AddN Op, Relu Op followed by
-      ReluGrad Op
-    Supports only tensors of type {half, float}.
-)doc");
-
-#endif  //  TENSORFLOW_USE_ROCM
 
 }  // namespace tensorflow

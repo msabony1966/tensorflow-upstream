@@ -25,11 +25,11 @@ CastFunctorType GetCpuCastFromHalf(DataType dst_dtype) {
   return nullptr;
 }
 
-#if GOOGLE_CUDA || TENSORFLOW_USE_ROCM
+#if GOOGLE_CUDA
 CastFunctorType GetGpuCastFromHalf(DataType dst_dtype) {
   CURRY_TYPES3_NO_BF16(CAST_CASE, GPUDevice, Eigen::half);
   return nullptr;
 }
-#endif  // GOOGLE_CUDA || TENSORFLOW_USE_ROCM
+#endif  // GOOGLE_CUDA
 
 }  // namespace tensorflow

@@ -546,7 +546,10 @@ def tf_additional_all_protos():
     return ["//tensorflow/core:protos_all"]
 
 def tf_protos_all_impl():
-    return ["//tensorflow/core:protos_all_cc_impl"]
+    return [
+        "//tensorflow/core:autotuning_proto_cc_impl",
+        "//tensorflow/core:protos_all_cc_impl",
+    ]
 
 def tf_protos_all():
     return if_static(
@@ -607,6 +610,7 @@ def tf_additional_rocdl_deps():
 
 def tf_additional_rocdl_srcs():
   return ["platform/default/rocm_rocdl_path.cc"]
+
 
 def tf_additional_test_deps():
     return []
@@ -734,6 +738,12 @@ def tf_additional_gdr_lib_defines():
         "//conditions:default": [],
     })
 
+def tf_additional_numa_lib_defines():
+    return select({
+        "//tensorflow:with_numa_support": ["TENSORFLOW_USE_NUMA"],
+        "//conditions:default": [],
+    })
+
 def tf_py_clif_cc(name, visibility = None, **kwargs):
     pass
 
@@ -750,6 +760,11 @@ def tf_additional_binary_deps():
         [
             "//tensorflow/stream_executor:cuda_platform",
         ],
+    ) + if_rocm(
+        [
+            "//tensorflow/stream_executor:rocm_platform",
+            "//tensorflow/core/platform/default/build_config:rocm",
+        ],
     ) + [
         # TODO(allenl): Split these out into their own shared objects (they are
         # here because they are shared between contrib/ op shared objects and
@@ -761,3 +776,26 @@ def tf_additional_binary_deps():
             "//third_party/mkl:intel_binary_blob",
         ],
     )
+
+def tf_additional_numa_deps():
+    return select({
+        "//tensorflow:android": [],
+        "//tensorflow:ios": [],
+        "//tensorflow:windows": [],
+        "//tensorflow:macos": [],
+        "//conditions:default": [
+            "@hwloc",
+        ],
+    })
+
+def tf_additional_numa_copts():
+    return select({
+        "//tensorflow:android": [],
+        "//tensorflow:ios": [],
+        "//tensorflow:windows": [],
+        "//tensorflow:macos": [],
+        "//conditions:default": [
+            "-Ithird_party/hwloc/hwloc-master/include",
+            "-DTENSORFLOW_USE_NUMA",
+        ],
+    })

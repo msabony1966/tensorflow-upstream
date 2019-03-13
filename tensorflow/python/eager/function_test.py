@@ -209,6 +209,31 @@ class FunctionTest(test.TestCase, parameterized.TestCase):
       with self.assertRaisesRegexp(errors.InvalidArgumentError, r'MatMul'):
         fn(array_ops.ones((3, 4)))
 
+  def testNestedShapeFunctionRelaxation(self):
+
+    got_shape = [None]
+
+    # The inner function will go through shape relaxation because the shapes it
+    # receives will be [1], [2], [3], ...
+    @def_function.function
+    def bar(x_shape):
+      got_shape[0] = x_shape._shape_tuple()
+      return x_shape
+
+    # The outer function will not go through shape relaxation because the shapes
+    # it receives will be [1], [[1]], [[[1]]], ...
+    @def_function.function
+    def foo(ones):
+      return bar(array_ops.shape(ones))
+
+    for rank in range(1, 6):
+      x_shape = self.evaluate(foo(array_ops.ones([1] * rank)))
+      self.assertAllEqual(x_shape, [1] * rank)
+      if rank < 3:
+        self.assertEqual(got_shape[0], (rank,))
+      else:
+        self.assertEqual(got_shape[0], (None,))
+
   def testWastedAdd(self):
 
     @def_function.function()
@@ -2509,6 +2534,41 @@ class FunctionTest(test.TestCase, parameterized.TestCase):
     with ops.device('GPU:0'):
       x = func()
       self.assertRegexpMatches(x.device, 'GPU')
+
+  @test_util.run_in_graph_and_eager_modes
+  def testShapeCaching(self):
+
+    @function.defun
+    def func(x):
+      return array_ops.shape(x)
+
+    @function.defun(
+        input_signature=[tensor_spec.TensorSpec([None, None], dtypes.float32)])
+    def calls_func(x):
+      return func(x)
+
+    self.assertAllEqual([1, 1], self.evaluate(func(array_ops.zeros([1, 1]))))
+    self.assertAllEqual([2, 2], self.evaluate(func(array_ops.zeros([2, 2]))))
+    self.assertAllEqual(
+        [3, 3],
+        self.evaluate(calls_func(array_ops.zeros([3, 3]))))
+
+  def testLimitedRetracing(self):
+    trace_count = [0]
+    @function.defun
+    def func(x):
+      trace_count[0] += 1
+      return x
+
+    for _ in range(50):
+      func(constant_op.constant(3.))
+      func(constant_op.constant(4.))
+      func(constant_op.constant([[1., 2.]]))
+      func(constant_op.constant([[]]))
+      func(constant_op.constant([[3., 4.], [5., 6.]]))
+      func(constant_op.constant([[3., 4.], [5., 6.], [7., 8.]]))
+    # Tracing more than twice per input doesn't make sense.
+    self.assertLess(trace_count[0], 13)
 
 
 class MultiDeviceTest(test.TestCase, parameterized.TestCase):

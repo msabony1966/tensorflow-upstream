@@ -13,16 +13,15 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
-#if GOOGLE_CUDA || TENSORFLOW_USE_ROCM
+#if GOOGLE_CUDA
 
 #define EIGEN_USE_GPU
 
-#include "tensorflow/core/kernels/eye_functor.h"
-
-#include "third_party/eigen3/unsupported/Eigen/CXX11/Tensor"
+#include "tensorflow/core/framework/register_types.h"
 #include "tensorflow/core/framework/tensor_types.h"
-#include "tensorflow/core/platform/types.h"
-#include "tensorflow/core/util/gpu_kernel_helper.h"
+#include "tensorflow/core/framework/type_traits.h"
+#include "tensorflow/core/kernels/eye_functor.h"
+#include "tensorflow/core/util/cuda_kernel_helper.h"
 
 namespace tensorflow {
 namespace functor {
@@ -34,7 +33,7 @@ __global__ void EyeKernel(int num_threads, int batch_size, int m, int n,
                           Scalar* output_ptr) {
   const Scalar one = Scalar(1);
   const Scalar zero = Scalar(0);
-  GPU_1D_KERNEL_LOOP(index, num_threads) {
+  CUDA_1D_KERNEL_LOOP(index, num_threads) {
     // TODO(rmlarsen): Benchmark to see if it's just as fast to use mod (%),
     // since it's easier to read.
     const int global_row = index / n;
@@ -52,11 +51,10 @@ struct EyeFunctor<GPUDevice, Scalar> {
     const int batch_size = matrix_batch.dimension(0);
     const int m = matrix_batch.dimension(1);
     const int n = matrix_batch.dimension(2);
-    GpuLaunchConfig config = GetGpuLaunchConfig(batch_size * m * n, device);
-    GPU_LAUNCH_KERNEL(EyeKernel,
-        dim3(config.block_count), dim3(config.thread_per_block), 0,
-        device.stream(),
-        config.virtual_thread_count, batch_size, m, n, matrix_batch.data());
+    CudaLaunchConfig config = GetCudaLaunchConfig(batch_size * m * n, device);
+    EyeKernel<<<config.block_count, config.thread_per_block, 0,
+                device.stream()>>>(config.virtual_thread_count, batch_size, m,
+                                   n, matrix_batch.data());
   }
 };
 
@@ -68,4 +66,4 @@ template struct EyeFunctor<GPUDevice, complex128>;
 }  // namespace functor
 }  // namespace tensorflow
 
-#endif  // GOOGLE_CUDA || TENSORFLOW_USE_ROCM
+#endif  // GOOGLE_CUDA

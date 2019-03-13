@@ -99,7 +99,7 @@ CastFunctorType GetCpuCastFromComplex128(DataType dst_dtype);
 
 CastFunctorType GetCpuCastFromBfloat(DataType dst_dtype);
 
-#if GOOGLE_CUDA || TENSORFLOW_USE_ROCM
+#if GOOGLE_CUDA
 // Same, for GPU.
 CastFunctorType GetGpuCastFromBool(DataType dst_dtype);
 
@@ -131,7 +131,7 @@ CastFunctorType GetGpuCastFromComplex128(DataType dst_dtype);
 
 CastFunctorType GetGpuCastFromBfloat(DataType dst_dtype);
 
-#endif  // GOOGLE_CUDA || TENSORFLOW_USE_ROCM
+#endif  // GOOGLE_CUDA
 
 #ifdef TENSORFLOW_USE_SYCL
 CastFunctorType GetSyclCastFromBool(DataType dst_dtype);

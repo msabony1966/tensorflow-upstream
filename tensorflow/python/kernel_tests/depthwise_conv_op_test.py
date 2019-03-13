@@ -193,11 +193,7 @@ class DepthwiseConv2DTest(test.TestCase):
       tf_logging.info(
           "Testing DepthwiseConv2D, %dth config: %r * %r, stride: %d, padding: "
           "%s", index, input_size, filter_size, stride, padding)
-      dtypes_to_test = [dtypes.float32]
-      if not test.is_built_with_rocm():
-        # CNN for double datatype not yet supported in ROCm
-        dtypes_to_test += [dtypes.float64]
-      for data_type in dtypes_to_test:
+      for data_type in [dtypes.float32, dtypes.float64]:
         tf_logging.info("Testing without grouped_conv")
         self._VerifyValues(
             input_size, filter_size, stride, padding, data_type, use_gpu=True)
@@ -233,11 +229,7 @@ class DepthwiseConv2DTest(test.TestCase):
       tf_logging.info(
           "Testing DepthwiseConv2DFormat, %dth config: %r * %r, stride: %d, "
           "padding: %s", index, input_size, filter_size, stride, padding)
-      dtypes_to_test = [dtypes.float32]
-      if not test.is_built_with_rocm():
-        # CNN for double datatype not yet supported in ROCm
-        dtypes_to_test += [dtypes.float64]
-      for data_type in dtypes_to_test:
+      for data_type in [dtypes.float32, dtypes.float64]:
         self._VerifyValues(
             input_size,
             filter_size,
@@ -445,11 +437,7 @@ class DepthwiseConv2DTest(test.TestCase):
       tf_logging.info(
           "Testing DepthwiseConv2DInputGrad, %dth config: %r * %r, stride: %d, "
           "padding: %s", index, input_size, filter_size, stride, padding)
-      dtypes_to_test = [dtypes.float32]
-      if not test.is_built_with_rocm():
-        # CNN for double datatype not yet supported in ROCm
-        dtypes_to_test += [dtypes.float64]
-      for data_type in dtypes_to_test:
+      for data_type in [dtypes.float32, dtypes.float64]:
         self._ConstructAndTestGradient(
             input_size,
             filter_size,
@@ -480,11 +468,7 @@ class DepthwiseConv2DTest(test.TestCase):
           "Testing DepthwiseConv2DInputGradFormat, %dth config: %r * %r, "
           "stride: %d, padding: %s", index, input_size, filter_size, stride,
           padding)
-      dtypes_to_test = [dtypes.float32]
-      if not test.is_built_with_rocm():
-        # CNN for double datatype not yet supported in ROCm
-        dtypes_to_test += [dtypes.float64]
-      for data_type in dtypes_to_test:
+      for data_type in [dtypes.float32, dtypes.float64]:
         self._ConstructAndTestGradient(
             input_size,
             filter_size,
@@ -503,11 +487,7 @@ class DepthwiseConv2DTest(test.TestCase):
       tf_logging.info(
           "Testing DepthwiseConv2DFilterGrad, %dth config: %r * %r, stride: "
           "%d, padding: %s", index, input_size, filter_size, stride, padding)
-      dtypes_to_test = [dtypes.float32]
-      if not test.is_built_with_rocm():
-        # CNN for double datatype not yet supported in ROCm
-        dtypes_to_test += [dtypes.float64]
-      for data_type in dtypes_to_test:
+      for data_type in [dtypes.float32, dtypes.float64]:
         self._ConstructAndTestGradient(
             input_size,
             filter_size,
@@ -528,11 +508,7 @@ class DepthwiseConv2DTest(test.TestCase):
           "Testing DepthwiseConv2DFilterGradFormat, %dth config: %r * %r, "
           "stride: %d, padding: %s", index, input_size, filter_size, stride,
           padding)
-      dtypes_to_test = [dtypes.float32]
-      if not test.is_built_with_rocm():
-        # CNN for double datatype not yet supported in ROCm
-        dtypes_to_test += [dtypes.float64]
-      for data_type in dtypes_to_test:
+      for data_type in [dtypes.float32, dtypes.float64]:
         self._ConstructAndTestGradient(
             input_size,
             filter_size,
@@ -593,11 +569,6 @@ class DepthwiseConv2DTest(test.TestCase):
           padding)
       self._CompareBackpropInputFloat(input_size, filter_size, output_size,
                                       stride, padding)
-
-      if test.is_built_with_rocm() :
-        # CNN for double datatype not yet supported in ROCm
-        continue
-
       self._CompareBackpropInputDouble(input_size, filter_size, output_size,
                                        stride, padding)
 
@@ -650,11 +621,6 @@ class DepthwiseConv2DTest(test.TestCase):
           padding)
       self._CompareBackpropFilterFloat(input_size, filter_size, output_size,
                                        stride, padding)
-
-      if test.is_built_with_rocm() :
-        # CNN for double datatype not yet supported in ROCm
-        continue
-
       self._CompareBackpropFilterDouble(input_size, filter_size, output_size,
                                         stride, padding)
 

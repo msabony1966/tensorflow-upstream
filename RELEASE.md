@@ -7,10 +7,6 @@
 * Support for Python3.7 on all operating systems.
 * Moved NCCL to core.
 
-## ROCm Features and Improvements
-* MIOpen v1.7.1 integration
-* Tensorflow VERBS support is enabled, details in: [TensorFlow Verbs Quick-Start](https://github.com/ROCmSoftwarePlatform/tensorflow-upstream/blob/r1.13-rocm/rocm_docs/tensorflow-verbs.md)
-
 ## Behavioral changes
 
 * Disallow conversion of python floating types to uint32/64 (matching behavior of other integer types) in `tf.constant`.
@@ -128,12 +124,6 @@ Abhinav Upadhyay, Ag Ramesh, akikaaa, Alexis Louis, Anders Huss, Andreas Madsen,
 *   TensorFlow binaries are built with XLA support linked in by default.
 *   Ignite Dataset added to contrib/ignite that allows to work with Apache
     Ignite.
-
-## ROCm Features and Improvements
-* MIOpenv1.6 integration
-* Training in fp16 is fully supported
-* Performance improvements in TF CNN benchmarks
-* Layer fusion is supported, details in: [TensorFlow ROCm port high-level design document](https://github.com/ROCmSoftwarePlatform/tensorflow-upstream/blob/r1.12-rocm/rocm_docs/rocm-port-overview.md)
 
 ## Bug Fixes and Other Changes
 

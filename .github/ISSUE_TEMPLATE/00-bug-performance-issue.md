@@ -15,7 +15,7 @@ about: Use this template for reporting a bug or a performance issue.
 - Python version:
 - Bazel version (if compiling from source):
 - GCC/Compiler version (if compiling from source):
-- ROCm/MIOpen version:
+- CUDA/cuDNN version:
 - GPU model and memory:
 
 

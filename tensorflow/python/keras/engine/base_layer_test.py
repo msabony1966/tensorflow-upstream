@@ -409,9 +409,6 @@ class SymbolicSupportTest(test.TestCase):
 
   @test_util.run_in_graph_and_eager_modes
   def test_mixing_keras_symbolic_tensors_and_eager_tensors(self):
-    # ROCm does not yet support eager
-    if test.is_built_with_rocm():
-        return
     x1 = keras.Input((3,))
     x2 = array_ops.ones((3, 3))
     y = math_ops.matmul(x1, x2)
@@ -549,6 +546,40 @@ class NestedTrackingTest(test.TestCase):
       _ = layer(inputs)
       self.assertEqual(len(layer.losses), 3)
       self.assertEqual(len(layer.updates), 3)
+
+  def test_attribute_reassignment(self):
+    l = keras.layers.Layer()
+    l.a = keras.layers.Layer()
+    l.a = []
+    l.a = variables.Variable(1.)
+    l.a = keras.layers.Layer()
+    last_assignment = keras.layers.Layer()
+    l.a = last_assignment
+    l.b = variables.Variable(1.)
+    del l.b
+    l.c = keras.layers.Layer()
+    del l.c
+    l.d = last_assignment
+    del l.d
+    self.assertEqual([last_assignment], l._layers)
+    self.assertEqual([], l.trainable_weights)
+    self.assertEqual([], l.non_trainable_weights)
+    self.assertEqual([], l.weights)
+    del l.a
+    self.assertEqual([], l._layers)
+
+  def test_assign_op_not_tracked_as_variable(self):
+
+    class LayerWithAssignAttr(keras.layers.Layer):
+
+      def build(self, input_shape):
+        self.v = variables.Variable(1.)
+        self.v_assign = self.v.assign_add(2.)
+
+    layer = LayerWithAssignAttr()
+    layer.build((10, 10))
+
+    self.assertEqual([layer.v], layer.variables)
 
 
 @test_util.run_all_in_graph_and_eager_modes

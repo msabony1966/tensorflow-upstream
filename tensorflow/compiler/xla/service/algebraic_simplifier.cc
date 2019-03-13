@@ -1219,7 +1219,7 @@ StatusOr<bool> AlgebraicSimplifierVisitor::HandleDotStrengthReduction(
     return true;
   }
 
-  // Simplify outer product into multiply with implicit broadcasting.
+  // Simplify outer product into multiply with broadcasting.
   //
   // A dot(a[M, 1], b[1, N]) = multiply(a [M,1], b [1, N])
   if (rhs_rank == 2 && rhs->shape().dimensions(rhs_collapsing_dim) == 1) {
@@ -2838,6 +2838,27 @@ Status AlgebraicSimplifierVisitor::HandleSlice(HloInstruction* slice) {
                    new_slice_starts, new_slice_limits, slice->slice_strides()));
   }
 
+  auto only_broadcast_dims_sliced = [&] {
+    if (slice->operand(0)->opcode() != HloOpcode::kBroadcast) {
+      return false;
+    }
+    for (int64 dim : slice->operand(0)->dimensions()) {
+      if (slice->slice_starts(dim) != 0 || slice->slice_strides(dim) != 1 ||
+          slice->slice_limits(dim) !=
+              slice->operand(0)->shape().dimensions(dim)) {
+        return false;
+      }
+    }
+    return true;
+  };
+  if (only_broadcast_dims_sliced()) {
+    return ReplaceWithNewInstruction(
+        slice,
+        HloInstruction::CreateBroadcast(
+            slice->shape(), slice->mutable_operand(0)->mutable_operand(0),
+            slice->mutable_operand(0)->dimensions()));
+  }
+
   TF_ASSIGN_OR_RETURN(bool replaced, TrySimplifyScalarSlice(slice));
   if (replaced) {
     return Status::OK();
@@ -3250,7 +3271,7 @@ Status AlgebraicSimplifierVisitor::HandleReduceWindow(
   }
 
   if (is_effective_broadcast()) {
-    VLOG(10) << "Replacing pad/reduce-window with (implicit) broadcast.";
+    VLOG(10) << "Replacing pad/reduce-window with broadcast.";
     auto fadd = [this](std::unique_ptr<HloInstruction> x) {
       return computation_->AddInstruction(std::move(x));
     };
@@ -3687,6 +3708,11 @@ Status AlgebraicSimplifierVisitor::HandleMap(HloInstruction* map) {
         map,
         HloInstruction::CreateBroadcast(
             map->shape(), computation_->AddInstruction(std::move(clone)), {}));
+  }
+  // Inline the map if the map computation only contains an elementwise
+  // operation that can accept arbitrary shapes.
+  if (map_root->opcode() == HloOpcode::kFusion || !map_root->IsElementwise()) {
+    return Status::OK();
   }
   std::vector<HloInstruction*> new_operands;
   for (auto* root_operand : map_root->operands()) {

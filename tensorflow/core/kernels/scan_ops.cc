@@ -14,9 +14,9 @@ limitations under the License.
 ==============================================================================*/
 
 #define EIGEN_USE_THREADS
-#if GOOGLE_CUDA || TENSORFLOW_USE_ROCM
+#if GOOGLE_CUDA
 #define EIGEN_USE_GPU
-#endif  // GOOGLE_CUDA || TENSORFLOW_USE_ROCM
+#endif  // GOOGLE_CUDA
 
 #include "tensorflow/core/framework/bounds_check.h"
 #include "tensorflow/core/framework/numeric_op.h"
@@ -89,7 +89,7 @@ class ScanOp : public OpKernel {
   bool exclusive_;
 };
 
-#if GOOGLE_CUDA
+#ifdef GOOGLE_CUDA
 namespace functor {
 
 // Forward declarations of GPU functors

@@ -159,6 +159,12 @@ def if_emscripten(a):
         "//conditions:default": [],
     })
 
+def if_macos(a):
+    return select({
+        clean_dep("//tensorflow:macos"): a,
+        "//conditions:default": [],
+    })
+
 def if_ios(a):
     return select({
         clean_dep("//tensorflow:ios"): a,
@@ -214,12 +220,6 @@ def if_not_windows_cuda(a):
 def if_linux_x86_64(a):
     return select({
         clean_dep("//tensorflow:linux_x86_64"): a,
-        "//conditions:default": [],
-    })
-
-def if_darwin(a):
-    return select({
-        clean_dep("//tensorflow:darwin"): a,
         "//conditions:default": [],
     })
 
@@ -297,7 +297,7 @@ def tf_copts(android_optimization_level_override = "-O2", is_external = False):
         }) +
         select({
             clean_dep("//tensorflow:android"): android_copts,
-            clean_dep("//tensorflow:darwin"): [],
+            clean_dep("//tensorflow:macos"): [],
             clean_dep("//tensorflow:windows"): get_win_copts(is_external),
             clean_dep("//tensorflow:ios"): ["-std=c++11"],
             clean_dep("//tensorflow:no_lgpl_deps"): ["-D__TENSORFLOW_NO_LGPL_DEPS__", "-pthread"],
@@ -369,7 +369,7 @@ def _rpath_linkopts(name):
     # directory in the tensorflow/ tree.
     levels_to_root = native.package_name().count("/") + name.count("/")
     return select({
-        clean_dep("//tensorflow:darwin"): [
+        clean_dep("//tensorflow:macos"): [
             "-Wl,%s" % (_make_search_paths("@loader_path", levels_to_root),),
         ],
         clean_dep("//tensorflow:windows"): [],
@@ -406,6 +406,17 @@ def tf_binary_dynamic_kernel_deps(kernels):
         otherwise = kernels,
     )
 
+# Shared libraries have different name pattern on different platforms,
+# but cc_binary cannot output correct artifact name yet,
+# so we generate multiple cc_binary targets with all name patterns when necessary.
+# TODO(pcloudy): Remove this workaround when https://github.com/bazelbuild/bazel/issues/4570
+# is done and cc_shared_library is available.
+SHARED_LIBRARY_NAME_PATTERNS = [
+    "lib%s.so",  # On Linux, shared libraries are usually named as libfoo.so
+    "lib%s.dylib",  # On macos, shared libraries are usually named as libfoo.dylib
+    "%s.dll",  # On Windows, shared libraries are usually named as foo.dll
+]
+
 def tf_cc_shared_object(
         name,
         srcs = [],
@@ -414,24 +425,42 @@ def tf_cc_shared_object(
         linkopts = [],
         framework_so = tf_binary_additional_srcs(),
         kernels = [],
+        per_os_targets = False,  # Generate targets with SHARED_LIBRARY_NAME_PATTERNS
+        visibility = None,
         **kwargs):
-    native.cc_binary(
-        name = name,
-        srcs = srcs + framework_so,
-        deps = deps,
-        linkshared = 1,
-        data = data,
-        linkopts = linkopts + _rpath_linkopts(name) + select({
-            clean_dep("//tensorflow:darwin"): [
-                "-Wl,-install_name,@rpath/" + name.split("/")[-1],
-            ],
-            clean_dep("//tensorflow:windows"): [],
-            "//conditions:default": [
-                "-Wl,-soname," + name.split("/")[-1],
-            ],
-        }),
-        **kwargs
-    )
+    if per_os_targets:
+        names = [pattern % name for pattern in SHARED_LIBRARY_NAME_PATTERNS]
+    else:
+        names = [name]
+    for name_os in names:
+        native.cc_binary(
+            name = name_os,
+            srcs = srcs + framework_so,
+            deps = deps,
+            linkshared = 1,
+            data = data,
+            linkopts = linkopts + _rpath_linkopts(name_os) + select({
+                clean_dep("//tensorflow:macos"): [
+                    "-Wl,-install_name,@rpath/" + name_os.split("/")[-1],
+                ],
+                clean_dep("//tensorflow:windows"): [],
+                "//conditions:default": [
+                    "-Wl,-soname," + name_os.split("/")[-1],
+                ],
+            }),
+            visibility = visibility,
+            **kwargs
+        )
+    if name not in names:
+        native.filegroup(
+            name = name,
+            srcs = select({
+                "//tensorflow:windows": [":%s.dll" % name],
+                "//tensorflow:macos": [":lib%s.dylib" % name],
+                "//conditions:default": [":lib%s.so" % name],
+            }),
+            visibility = visibility,
+        )
 
 register_extension_info(
     extension_name = "tf_cc_shared_object",
@@ -450,25 +479,43 @@ def tf_cc_binary(
         linkopts = [],
         copts = tf_copts(),
         kernels = [],
+        per_os_targets = False,  # Generate targets with SHARED_LIBRARY_NAME_PATTERNS
+        visibility = None,
         **kwargs):
     if kernels:
         added_data_deps = tf_binary_dynamic_kernel_dsos()
     else:
         added_data_deps = []
 
-    native.cc_binary(
-        name = name,
-        copts = copts,
-        srcs = srcs + tf_binary_additional_srcs(),
-        deps = deps + tf_binary_dynamic_kernel_deps(kernels) + if_mkl_ml(
-            [
-                clean_dep("//third_party/mkl:intel_binary_blob"),
-            ],
-        ),
-        data = depset(data + added_data_deps),
-        linkopts = linkopts + _rpath_linkopts(name),
-        **kwargs
-    )
+    if per_os_targets:
+        names = [pattern % name for pattern in SHARED_LIBRARY_NAME_PATTERNS]
+    else:
+        names = [name]
+    for name_os in names:
+        native.cc_binary(
+            name = name_os,
+            copts = copts,
+            srcs = srcs + tf_binary_additional_srcs(),
+            deps = deps + tf_binary_dynamic_kernel_deps(kernels) + if_mkl_ml(
+                [
+                    clean_dep("//third_party/mkl:intel_binary_blob"),
+                ],
+            ),
+            data = depset(data + added_data_deps),
+            linkopts = linkopts + _rpath_linkopts(name_os),
+            visibility = visibility,
+            **kwargs
+        )
+    if name not in names:
+        native.filegroup(
+            name = name,
+            srcs = select({
+                "//tensorflow:windows": [":%s.dll" % name],
+                "//tensorflow:macos": [":lib%s.dylib" % name],
+                "//conditions:default": [":lib%s.so" % name],
+            }),
+            visibility = visibility,
+        )
 
 register_extension_info(
     extension_name = "tf_cc_binary",
@@ -800,7 +847,7 @@ def tf_cc_test(
                 "-pie",
             ],
             clean_dep("//tensorflow:windows"): [],
-            clean_dep("//tensorflow:darwin"): [
+            clean_dep("//tensorflow:macos"): [
                 "-lm",
             ],
             "//conditions:default": [
@@ -822,7 +869,7 @@ def tf_cc_test(
             # cc_tests with ".so"s in srcs incorrectly link on Darwin unless
             # linkstatic=1 (https://github.com/bazelbuild/bazel/issues/3450).
             # TODO(allenl): Remove Mac static linking when Bazel 0.6 is out.
-            clean_dep("//tensorflow:darwin"): 1,
+            clean_dep("//tensorflow:macos"): 1,
             "//conditions:default": 0,
         }),
         nocopts = nocopts,
@@ -899,54 +946,35 @@ def tf_gpu_cc_test(
         linkopts = linkopts,
         linkstatic = select({
             # TODO(allenl): Remove Mac static linking when Bazel 0.6 is out.
-            clean_dep("//tensorflow:darwin"): 1,
+            clean_dep("//tensorflow:macos"): 1,
             "@local_config_cuda//cuda:using_nvcc": 1,
             "@local_config_cuda//cuda:using_clang": 1,
             "//conditions:default": 0,
         }),
         suffix = "_gpu",
         tags = tags + tf_gpu_tests_tags(),
-        deps = deps + [ 
+        deps = deps + if_cuda_is_configured([
             clean_dep("//tensorflow/core:gpu_runtime"),
-        ],
+        ]) + if_rocm_is_configured([
+            clean_dep("//tensorflow/core:gpu_runtime"),
+        ]),
+
     )
 
 register_extension_info(
     extension_name = "tf_gpu_cc_test",
-    label_regex_for_dep = "{extension_name}",
+    label_regex_for_dep = "{extension_name}_gpu",
 )
-
 # terminology changes: saving tf_cuda_* definition for compatibility
-def tf_cuda_cc_test(
-        name,
-        srcs = [],
-        deps = [],
-        tags = [],
-        data = [],
-        size = "medium",
-        extra_copts = [],
-        linkstatic = 0,
-        args = [],
-        kernels = [],
-        linkopts = []):
-    tf_gpu_cc_test(
-        name,
-        srcs = srcs,
-        deps = deps,
-        tags = tags,
-        data = data,
-        size = size,
-        extra_copts = extra_copts,
-        linkstatic = linkstatic,
-        linkopts = linkopts,
-        args = args,
-        kernels = kernels,
-    )
+def tf_cuda_cc_test(*args, **kwargs):
+    tf_gpu_cc_test(*args, **kwargs)
+
 
 register_extension_info(
     extension_name = "tf_cuda_cc_test",
     label_regex_for_dep = "{extension_name}",
 )
+
 
 def tf_gpu_only_cc_test(
         name,
@@ -980,7 +1008,7 @@ def tf_gpu_only_cc_test(
             # cc_tests with ".so"s in srcs incorrectly link on Darwin
             # unless linkstatic=1.
             # TODO(allenl): Remove Mac static linking when Bazel 0.6 is out.
-            clean_dep("//tensorflow:darwin"): 1,
+            clean_dep("//tensorflow:macos"): 1,
             "//conditions:default": 0,
         }),
         tags = tags,
@@ -1021,6 +1049,7 @@ register_extension_info(
     extension_name = "tf_gpu_only_cc_test",
     label_regex_for_dep = "{extension_name}_gpu",
 )
+
 
 # Create a cc_test for each of the tensorflow tests listed in "tests"
 def tf_cc_tests(
@@ -1144,6 +1173,7 @@ def tf_cuda_cc_tests(
         linkopts = linkopts,
     )
 
+
 def tf_java_test(
         name,
         srcs = [],
@@ -1250,12 +1280,13 @@ def tf_gpu_library(deps = None, cuda_deps = None, copts = tf_copts(), **kwargs):
             clean_dep("//tensorflow/stream_executor/cuda:cudart_stub"),
             "@local_config_cuda//cuda:cuda_headers",
         ]) + if_rocm_is_configured(cuda_deps + [
-            clean_dep("//tensorflow/core:rocm"),
-            "@local_config_rocm//rocm:rocm_headers",
+            # rocm_header placeholder
         ]),
         copts = (copts + if_cuda(["-DGOOGLE_CUDA=1"]) + if_rocm(["-DTENSORFLOW_USE_ROCM=1"]) + if_mkl(["-DINTEL_MKL=1"]) + if_mkl_open_source_only(["-DINTEL_MKL_DNN_ONLY"]) + if_enable_mkl(["-DENABLE_MKL"]) + if_tensorrt(["-DGOOGLE_TENSORRT=1"])),
         **kwargs
     )
+
+
 
 register_extension_info(
     extension_name = "tf_gpu_library",
@@ -1271,11 +1302,6 @@ def tf_cuda_library(deps = None, cuda_deps = None, copts = tf_copts(), **kwargs)
         **kwargs
     )
 
-register_extension_info(
-    extension_name = "tf_gpu_library",
-    label_regex_for_dep = "{extension_name}",
-)
-
 def tf_kernel_library(
         name,
         prefix = None,
@@ -1289,7 +1315,7 @@ def tf_kernel_library(
         **kwargs):
     """A rule to build a TensorFlow OpKernel.
 
-    May either specify srcs/hdrs or prefix.  Similar to tf_gpu_library,
+    May either specify srcs/hdrs or prefix.  Similar to tf_cuda_library,
     but with alwayslink=1 by default.  If prefix is specified:
       * prefix*.cc (except *.cu.cc) is added to srcs
       * prefix*.h (except *.cu.h) is added to hdrs
@@ -1695,7 +1721,7 @@ def tf_custom_op_library(name, srcs = [], gpu_srcs = [], deps = [], linkopts = [
                 "-lm",
             ],
             clean_dep("//tensorflow:windows"): [],
-            clean_dep("//tensorflow:darwin"): [],
+            clean_dep("//tensorflow:macos"): [],
         }),
         **kwargs
     )
@@ -1741,7 +1767,7 @@ def _append_init_to_versionscript_impl(ctx):
             template = ctx.file.template_file,
             output = ctx.outputs.versionscript,
             substitutions = {
-                "global:": "global:\n     init_%s;\n     PyInit_*;" % (mod_name),
+                "global:": "global:\n     init_%s;\n     _init_%s;\n     PyInit_*;\n     _PyInit_*;" % (mod_name, mod_name),
             },
             is_executable = False,
         )
@@ -1750,7 +1776,7 @@ def _append_init_to_versionscript_impl(ctx):
             template = ctx.file.template_file,
             output = ctx.outputs.versionscript,
             substitutions = {
-                "*tensorflow*": "*tensorflow*\ninit_%s\nPyInit_*\n" % (mod_name),
+                "*tensorflow*": "*tensorflow*\ninit_%s\n_init_%s\nPyInit_*\n_PyInit_*\n" % (mod_name, mod_name),
             },
             is_executable = False,
         )
@@ -2017,48 +2043,15 @@ def gpu_py_test(
             xla_enable_strict_auto_jit = False,
         )
 
-register_extension_info(
-    extension_name = "gpu_py_test",
-    label_regex_map = {"additional_deps": "additional_deps:{extension_name}"},
-)
-
 # terminology changes: saving cuda_* definition for compatibility
-def cuda_py_test(
-        name,
-        srcs,
-        size = "medium",
-        data = [],
-        main = None,
-        args = [],
-        shard_count = 1,
-        additional_deps = [],
-        kernels = [],
-        tags = [],
-        flaky = 0,
-        xla_enable_strict_auto_jit = False,
-        xla_enabled = False,
-        grpc_enabled = False):
-    gpu_py_test(
-        name = name,
-        srcs = srcs,
-        size = size,
-        data = data,
-        main = main,
-        args = args,
-        shard_count = shard_count,
-        additional_deps = additional_deps,
-        kernels = kernels,
-        tags = tags,
-        flaky = flaky,
-        xla_enable_strict_auto_jit = xla_enable_strict_auto_jit,
-        xla_enabled = xla_enabled,
-        grpc_enabled = grpc_enabled,
-    )
+def cuda_py_test(*args, **kwargs):
+    gpu_py_test(*args, **kwargs)
 
 register_extension_info(
     extension_name = "cuda_py_test",
     label_regex_map = {"additional_deps": "additional_deps:{extension_name}"},
 )
+
 
 def sycl_py_test(
         name,
@@ -2161,33 +2154,9 @@ def gpu_py_tests(
     )
 
 # terminology changes: saving cuda_* definition for compatibility
-def cuda_py_tests(
-        name,
-        srcs,
-        size = "medium",
-        additional_deps = [],
-        kernels = [],
-        data = [],
-        shard_count = 1,
-        tags = [],
-        prefix = "",
-        xla_enable_strict_auto_jit = False,
-        xla_enabled = False,
-        grpc_enabled = False):
-    gpu_py_tests(
-        name,
-        srcs,
-        size = size,
-        additional_deps = additional_deps,
-        kernels = kernels,
-        data = data,
-        shard_count = shard_count,
-        tags = tags,
-        prefix = prefix,
-        xla_enable_strict_auto_jit = xla_enable_strict_auto_jit,
-        xla_enabled = xla_enabled,
-        grpc_enabled = grpc_enabled,
-    )
+def cuda_py_tests(*args, **kwargs):
+    gpu_py_tests(*args, **kwargs)
+
 
 # Creates a genrule named <name> for running tools/proto_text's generator to
 # make the proto_text functions, for the protos passed in <srcs>.
@@ -2253,10 +2222,7 @@ def tf_py_build_info_genrule():
         name = "py_build_info_gen",
         outs = ["platform/build_info.py"],
         cmd =
-            "$(location //tensorflow/tools/build_info:gen_build_info) --raw_generate \"$@\" "
-            + " --is_config_cuda " + if_cuda("True", "False")
-            + " --is_config_rocm " + if_rocm("True", "False")
-            + if_windows(" --key_value msvcp_dll_name=msvcp140.dll", ""),
+            "$(location //tensorflow/tools/build_info:gen_build_info) --raw_generate \"$@\" --build_config " + if_cuda("cuda", "cpu") + if_windows(" --key_value msvcp_dll_name=msvcp140.dll", ""),
         local = 1,
         tools = [clean_dep("//tensorflow/tools/build_info:gen_build_info")],
     )

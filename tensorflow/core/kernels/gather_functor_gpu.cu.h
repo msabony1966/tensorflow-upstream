@@ -16,14 +16,14 @@ limitations under the License.
 #ifndef TENSORFLOW_CORE_KERNELS_GATHER_FUNCTOR_GPU_CU_H_
 #define TENSORFLOW_CORE_KERNELS_GATHER_FUNCTOR_GPU_CU_H_
 
-#if GOOGLE_CUDA || TENSORFLOW_USE_ROCM
+#if GOOGLE_CUDA
 
 #define EIGEN_USE_GPU
 
 #include "tensorflow/core/framework/register_types.h"
 #include "tensorflow/core/kernels/gather_functor.h"
 #include "tensorflow/core/platform/types.h"
-#include "tensorflow/core/util/gpu_kernel_helper.h"
+#include "tensorflow/core/util/cuda_kernel_helper.h"
 
 namespace tensorflow {
 
@@ -33,7 +33,7 @@ template <typename T, typename Index, bool is_axis_zero>
 __global__ void GatherOpKernel(const T* params, const Index* indices, T* out,
                                int64 gather_dim_size, int64 indices_size,
                                int64 slice_size, int64 out_size) {
-  GPU_1D_KERNEL_LOOP(i, out_size) {
+  CUDA_1D_KERNEL_LOOP(i, out_size) {
     Index batch_i = 0;
     Index indices_i = 0;
     Index slice_i = 0;
@@ -90,23 +90,17 @@ struct GatherFunctor<GPUDevice, T, Index> {
     const int64 indices_size = indices.size();
     const int64 slice_size = params.dimension(2);
 
-    GpuLaunchConfig config = GetGpuLaunchConfig(out_size, d);
+    CudaLaunchConfig config = GetCudaLaunchConfig(out_size, d);
     if (is_axis_zero) {
-      // clang-format off
-      GPU_LAUNCH_KERNEL((GatherOpKernel<T, Index, true>),
-          dim3(config.block_count), dim3(config.thread_per_block), 0,
-          d.stream(),
-          params.data(), indices.data(), out.data(), gather_dim_size,
-          indices_size, slice_size, out_size);
-      // clang-format on
+      TF_CHECK_OK(CudaLaunchKernel(
+          GatherOpKernel<T, Index, true>, config.block_count,
+          config.thread_per_block, 0, d.stream(), params.data(), indices.data(),
+          out.data(), gather_dim_size, indices_size, slice_size, out_size));
     } else {
-      // clang-format off
-      GPU_LAUNCH_KERNEL((GatherOpKernel<T, Index, false>),
-          dim3(config.block_count), dim3(config.thread_per_block), 0,
-          d.stream(),
-          params.data(), indices.data(), out.data(), gather_dim_size,
-          indices_size, slice_size, out_size);
-      // clang-format on
+      TF_CHECK_OK(CudaLaunchKernel(
+          GatherOpKernel<T, Index, false>, config.block_count,
+          config.thread_per_block, 0, d.stream(), params.data(), indices.data(),
+          out.data(), gather_dim_size, indices_size, slice_size, out_size));
     }
     // TODO(fpmc): enable indices validation on GPU.
     // Right now checking for indicies out of bound in the kernel would
@@ -118,6 +112,6 @@ struct GatherFunctor<GPUDevice, T, Index> {
 }  // namespace functor
 }  // namespace tensorflow
 
-#endif  // GOOGLE_CUDA || TENSORFLOW_USE_ROCM
+#endif  // GOOGLE_CUDA
 
 #endif  // TENSORFLOW_CORE_KERNELS_GATHER_FUNCTOR_GPU_CU_H_

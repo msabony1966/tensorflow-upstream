@@ -252,12 +252,8 @@ def IsGoogleCudaEnabled():
   return pywrap_tensorflow.IsGoogleCudaEnabled()
 
 
-def IsBuiltWithROCm():
-  return pywrap_tensorflow.IsBuiltWithROCm()
-
-
-def GpuSupportsHalfMatMulAndConv():
-  return pywrap_tensorflow.GpuSupportsHalfMatMulAndConv()
+def CudaSupportsHalfMatMulAndConv():
+  return pywrap_tensorflow.CudaSupportsHalfMatMulAndConv()
 
 
 def IsMklEnabled():
@@ -1016,10 +1012,12 @@ def py_func_if_in_function(f):
     if not ops.get_default_graph()._building_function:
       return f(*args, **kwds)
 
-    tensor_args, tensor_indices = zip(*[(x, i)
-                                        for i, x in enumerate(args)
-                                        if isinstance(x, (ops.Tensor,
-                                                          variables.Variable))])
+    tensor_args = []
+    tensor_indices = []
+    for i, arg in enumerate(args):
+      if isinstance(arg, (ops.Tensor, variables.Variable)):
+        tensor_args.append(arg)
+        tensor_indices.append(i)
 
     def inner_f(*inner_tensor_args):
       my_args = list(args)
@@ -1276,21 +1274,6 @@ def is_gpu_available(cuda_only=False, min_cuda_compute_capability=None):
     min_cuda_compute_capability: a (major,minor) pair that indicates the minimum
       CUDA compute capability required, or None if no requirement.
 
-  Note that the keyword arg name "cuda_only" is misleading (since routine will 
-  return true when a GPU device is available irrespective of whether TF was 
-  built with CUDA support or ROCm support. However no changes there because
-
-  ++ Changing the name "cuda_only" to something more generic would break 
-     backward compatibility
-
-  ++ Adding an equivalent "rocm_only" would require the implementation check 
-     the build type. This in turn would require doing the same for CUDA and thus
-     potentially break backward compatibility
-
-  ++ Adding a new "cuda_or_rocm_only" would not break backward compatibility, but
-     would require most (if not all) callers to update the call to use 
-     "cuda_or_rocm_only" instead of "cuda_only"
-
   Returns:
     True iff a gpu device of the requested kind is available.
   """
@@ -1506,7 +1489,8 @@ class TensorFlowTestCase(googletest.TestCase):
     if is_xla_enabled():
       os.putenv(
           "TF_XLA_FLAGS", "--tf_xla_auto_jit=2 --tf_xla_min_cluster_size=1 "
-          "--tf_xla_enable_lazy_compilation=false")
+          "--tf_xla_enable_lazy_compilation=false " +
+          os.getenv("TF_XLA_FLAGS", ""))
     self._threads = []
     self._tempdir = None
     self._cached_session = None

@@ -353,11 +353,7 @@ class MatrixSolveLsBenchmark(test_lib.Benchmark):
 
 
 if __name__ == "__main__":
-  dtypes_to_test = [np.float32, np.float64, np.complex64, np.complex128]
-  if test_lib.is_built_with_rocm():
-    # rocBLAS on ROCm stack does not support batched GEMM for complex types
-    dtypes_to_test = [np.float32, np.float64]
-  for dtype_ in dtypes_to_test:
+  for dtype_ in [np.float32, np.float64, np.complex64, np.complex128]:
     # TF2 does not support placeholders under eager so we skip it
     for use_placeholder_ in set([False, not tf2.enabled()]):
       for fast_ in [True, False]:
@@ -372,7 +368,7 @@ if __name__ == "__main__":
                                                              l2_regularizer_)
             _AddTest(MatrixSolveLsOpTest, "MatrixSolveLsOpTest", name,
                      test_case)
-  for dtype_ in dtypes_to_test:
+  for dtype_ in [np.float32, np.float64, np.complex64, np.complex128]:
     for test_case in _GetLargeMatrixSolveLsOpTests(dtype_, False, True, 0.0):
       name = "%s_%s" % (test_case.__name__, dtype_.__name__)
       _AddTest(MatrixSolveLsOpTest, "MatrixSolveLsOpTest", name, test_case)

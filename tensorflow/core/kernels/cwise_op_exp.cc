@@ -19,7 +19,7 @@ namespace tensorflow {
 REGISTER5(UnaryOp, CPU, "Exp", functor::exp, float, Eigen::half, double,
           complex64, complex128);
 
-#if GOOGLE_CUDA || TENSORFLOW_USE_ROCM
+#if GOOGLE_CUDA
 REGISTER5(UnaryOp, GPU, "Exp", functor::exp, float, Eigen::half, double,
           complex64, complex128);
 #endif

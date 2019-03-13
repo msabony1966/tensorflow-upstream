@@ -41,18 +41,11 @@ Status KernelThunk::Initialize(const GpuExecutable& executable,
   tensorflow::mutex_lock lock(mutex_);
   if (!loader_spec_) {
     loader_spec_.reset(new se::MultiKernelLoaderSpec(args_.size()));
-    tensorflow::StringPiece text = executable.text();
-    // Convert tensorflow::StringPiece to se::port::StringPiece because
-    // StreamExecutor uses the latter.
+    loader_spec_->AddCudaPtxInMemory(executable.ptx(), kernel_name_);
 
-    if (!executable.text().empty()) {
-      loader_spec_->AddCudaPtxInMemory(
-          se::port::StringPiece(text.data(), text.size()), kernel_name_);
-    }
-
-    if (!executable.binary().empty()) {
+    if (!executable.cubin().empty()) {
       loader_spec_->AddCudaCubinInMemory(
-          reinterpret_cast<const char*>(executable.binary().data()),
+          reinterpret_cast<const char*>(executable.cubin().data()),
           kernel_name_);
     }
   }

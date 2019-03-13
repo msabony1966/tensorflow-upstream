@@ -318,9 +318,6 @@ llvm::GlobalVariable* GetOrCreateVariableForPhiloxRngState(
 // should rarely produce the same result.
 void IncrementVariableForPhiloxRngState(int64 value, llvm::Module* module,
                                         llvm::IRBuilder<>* b);
-
-constexpr int kAMDGPUGlobalMemoryAddrSpace = 1;
-constexpr int kAMDGPUSharedMemoryAddrSpace = 3;
 }  // namespace llvm_ir
 }  // namespace xla
 

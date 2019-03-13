@@ -20,6 +20,7 @@ limitations under the License.
 
 #include "absl/strings/str_cat.h"
 #include "third_party/eigen3/Eigen/Core"
+#include "rocm/include/miopen/miopen.h"
 #include "tensorflow/stream_executor/rocm/rocm_activation.h"
 #include "tensorflow/stream_executor/rocm/rocm_diagnostics.h"
 #include "tensorflow/stream_executor/rocm/rocm_driver.h"
@@ -39,7 +40,6 @@ limitations under the License.
 #include "tensorflow/stream_executor/stream_executor_pimpl.h"
 #include "tensorflow/core/lib/hash/hash.h"
 // clang-format off
-#include "rocm/include/miopen/miopen.h"
 // clang-format on
 
 

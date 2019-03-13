@@ -15,7 +15,7 @@ about: Use this template for build/installation issues
 - Installed using virtualenv? pip? conda?:
 - Bazel version (if compiling from source):
 - GCC/Compiler version (if compiling from source):
-- ROCm/MIOpen version:
+- CUDA/cuDNN version:
 - GPU model and memory:
 
 

@@ -711,23 +711,34 @@ TEST_F(ConverterTest, PrepareTensorForShape_Tensor) {
   TRT_TensorOrWeights tw(input_tensor);
   const nvinfer1::ITensor* output_tensor = nullptr;
 
-  // Shape size doesn't match.
-  ExpectStatus(converter_->PrepareTensorForShape(tw, GetTestDims({2, 3, 6}),
-                                                 &output_tensor),
-               error::INVALID_ARGUMENT, "Reshape shapes are not compatible");
+  for (bool validation_only : {false, true}) {
+    // Shape size doesn't match.
+    ExpectStatus(
+        converter_->PrepareTensorForShape(tw, GetTestDims({2, 3, 6}),
+                                          validation_only, &output_tensor),
+        error::INVALID_ARGUMENT, "Reshape shapes are not compatible");
 
-  // TODO(aaroey): we should check the case where uninferred dimensions are not
-  // an exact divisor of input dim ensions, e.g. for dims {-1, 7}.
+    // TODO(aaroey): we should check the case where uninferred dimensions are
+    // not an exact divisor of input dim ensions, e.g. for dims {-1, 7}.
 
-  // Infer shape, ok.
-  TF_EXPECT_OK(converter_->PrepareTensorForShape(tw, GetTestDims({-1, 2}),
-                                                 &output_tensor));
-  ExpectTrtDimsEqualsArray({15, 2}, output_tensor->getDimensions());
+    // Infer shape, ok.
+    TF_EXPECT_OK(converter_->PrepareTensorForShape(
+        tw, GetTestDims({-1, 2}), validation_only, &output_tensor));
+    if (validation_only) {
+      EXPECT_EQ(nullptr, output_tensor);
+    } else {
+      ExpectTrtDimsEqualsArray({15, 2}, output_tensor->getDimensions());
+    }
 
-  // Regular shape.
-  TF_EXPECT_OK(converter_->PrepareTensorForShape(tw, GetTestDims({10, 3}),
-                                                 &output_tensor));
-  ExpectTrtDimsEqualsArray({10, 3}, output_tensor->getDimensions());
+    // Regular shape.
+    TF_EXPECT_OK(converter_->PrepareTensorForShape(
+        tw, GetTestDims({10, 3}), validation_only, &output_tensor));
+    if (validation_only) {
+      EXPECT_EQ(nullptr, output_tensor);
+    } else {
+      ExpectTrtDimsEqualsArray({10, 3}, output_tensor->getDimensions());
+    }
+  }
 }
 
 TEST_F(ConverterTest, PrepareTensorForShape_Weights) {
@@ -735,9 +746,15 @@ TEST_F(ConverterTest, PrepareTensorForShape_Weights) {
       weight_store_->GetTempWeights(DT_FLOAT, GetTestDims({2, 3, 5}));
   TRT_TensorOrWeights tw(weights);
   const nvinfer1::ITensor* output_tensor = nullptr;
-  TF_EXPECT_OK(converter_->PrepareTensorForShape(tw, GetTestDims({10, 3}),
-                                                 &output_tensor));
-  ExpectTrtDimsEqualsArray({10, 3}, output_tensor->getDimensions());
+  for (bool validation_only : {false, true}) {
+    TF_EXPECT_OK(converter_->PrepareTensorForShape(
+        tw, GetTestDims({10, 3}), validation_only, &output_tensor));
+    if (validation_only) {
+      EXPECT_EQ(nullptr, output_tensor);
+    } else {
+      ExpectTrtDimsEqualsArray({10, 3}, output_tensor->getDimensions());
+    }
+  }
 }
 
 TEST_F(ConverterTest, MaybeUpdateBatchSize) {
@@ -1554,9 +1571,9 @@ TEST_F(OpConverterTest, ConvertMatMul) {
     NodeDef node_def = get_matmul_nodedef(DT_INT32, false, false);
     AddTestTensor("input", {2}, /*batch_size=*/1, nvinfer1::DataType::kINT32);
     AddTestWeights<int32>("weights", {2, 1}, {3, 5});
-    RunValidationAndConversion(
-        node_def, error::UNIMPLEMENTED,
-        "Data type is not supported, for node my_matmul got int32");
+    RunValidationAndConversion(node_def, error::UNIMPLEMENTED,
+                               "Data type int32 is not supported for MatMul, "
+                               "must be one of [float, half], at my_matmul");
   }
   // transpose_a is set.
   for (bool transpose_b : {false, true}) {
@@ -2553,8 +2570,8 @@ TEST_F(OpConverterTest, ConvertStridedSlice) {
 
   // Get nodedef for StridedSlice layer.
   auto get_strided_slice_nodedef =
-      [](int begin_mask = 0, int end_mask = 0, int ellipsis_mask = 0,
-         int new_axis_mask = 0, int shrink_axis_mask = 0) -> NodeDef {
+      [](int64 begin_mask = 0, int64 end_mask = 0, int64 ellipsis_mask = 0,
+         int64 new_axis_mask = 0, int64 shrink_axis_mask = 0) -> NodeDef {
     Scope s = Scope::NewRootScope();
     auto input = ops::Placeholder(s.WithOpName("input"), DT_FLOAT);
     auto begin = ops::Placeholder(s.WithOpName("begin"), DT_INT32);
@@ -3311,8 +3328,9 @@ TEST_F(OpConverterTest, ConvertTopK) {
   {
     // Input list is empty, should fail.
     NodeDef node_def = MakeNodeDef("my_topk", "TopKV2", {});
-    RunValidationAndConversion(node_def, error::INVALID_ARGUMENT,
-                               "Input expects tensor and weights, at my_topk");
+    RunValidationAndConversion(
+        node_def, error::INVALID_ARGUMENT,
+        "TopKV2 got 0 inputs but expected 2, at my_topk");
   }
 
   for (const auto dtype : {DT_FLOAT, DT_INT32}) {
@@ -3329,8 +3347,8 @@ TEST_F(OpConverterTest, ConvertTopK) {
                     /*trt_dtype=*/TfDataTypeToTrt(dtype));
       AddTestTensor("weights", {2});
       RunValidationAndConversion(
-          node_def, error::INVALID_ARGUMENT,
-          "Input expects tensor and weights, at my_topk");
+          node_def, error::UNIMPLEMENTED,
+          "The input \"k\" for TopKV2 must be a constant, at my_topk");
     }
     {
       // Ok.

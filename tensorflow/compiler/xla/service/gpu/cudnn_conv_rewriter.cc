@@ -490,7 +490,6 @@ MatchBackwardInput(HloInstruction* conv) {
 
 CudnnConvBackendConfig GetDefaultBackendConfig() {
   CudnnConvBackendConfig config;
-  config.set_algorithm(-1);
   config.set_conv_result_scale(1);
   return config;
 }

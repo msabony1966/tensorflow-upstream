@@ -682,7 +682,7 @@ alias(
 cc_library(
     name = "rocm_platform",
     srcs = if_rocm_is_configured(
-        glob(
+            glob(
             [
                 "gpu/*.cc",
                 "rocm/*.cc",
@@ -690,7 +690,7 @@ cc_library(
         ),
     ),
     hdrs = if_rocm_is_configured(
-        glob(
+           glob(
             [
                 "gpu/*.h",
                 "rocm/*.h",

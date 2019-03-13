@@ -18,7 +18,7 @@ limitations under the License.
 namespace tensorflow {
 REGISTER6(BinaryOp, CPU, "Maximum", functor::maximum, float, Eigen::half,
           bfloat16, double, int32, int64);
-#if GOOGLE_CUDA || TENSORFLOW_USE_ROCM
+#if GOOGLE_CUDA
 REGISTER4(BinaryOp, GPU, "Maximum", functor::maximum, float, Eigen::half,
           double, int64);
 
