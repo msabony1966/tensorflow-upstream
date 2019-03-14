@@ -57,7 +57,7 @@ class AMDGPUExecutable : public GpuExecutable {
                    std::unique_ptr<HloProfileIndexMap> hlo_profile_index_map);
 
   Status CheckCompatibilityWithServiceExecutableRunOptions(
-      const ServiceExecutableRunOptions* run_options) override;
+      const ServiceExecutableRunOptions* run_options) ;
 
  private:
   // AMDGPU GCN ISA version of the GPU we're targeting with this AMDGPUExecutable.

@@ -41,11 +41,11 @@ Status KernelThunk::Initialize(const GpuExecutable& executable,
   tensorflow::mutex_lock lock(mutex_);
   if (!loader_spec_) {
     loader_spec_.reset(new se::MultiKernelLoaderSpec(args_.size()));
-    loader_spec_->AddCudaPtxInMemory(executable.ptx(), kernel_name_);
+    loader_spec_->AddCudaPtxInMemory(executable.text(), kernel_name_);
 
     if (!executable.binary().empty()) {
       loader_spec_->AddCudaCubinInMemory(
-          reinterpret_cast<const char*>(executable.cubin().data()),
+          reinterpret_cast<const char*>(executable.binary().data()),
           kernel_name_);
     }
   }

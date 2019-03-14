@@ -332,7 +332,6 @@ tf_cuda_library(
 cc_library(
     name = "gpu_executable",
     srcs = [
-        "cholesky_thunk.cc",
         "conditional_thunk.cc",
         "convolution_thunk.cc",
         "copy_thunk.cc",
@@ -350,10 +349,12 @@ cc_library(
         "triangular_solve_thunk.cc",
         "tuple_thunk.cc",
         "while_thunk.cc",
-    ] + if_cuda_is_configured(["nvptx_executable.cc"]) 
+    ] + if_cuda_is_configured([
+         "cholesky_thunk.cc",
+         "nvptx_executable.cc"
+     ]) 
       +  if_rocm_is_configured(["amdgpu_executable.cc"]),
     hdrs = [
-        "cholesky_thunk.h",
         "conditional_thunk.h",
         "convolution_thunk.h",
         "copy_thunk.h",
@@ -371,12 +372,14 @@ cc_library(
         "triangular_solve_thunk.h",
         "tuple_thunk.h",
         "while_thunk.h",
-    ] + if_cuda_is_configured(["nvptx_executable.h"]) 
-      + if_rocm_is_configured(["amdgpu_executable.h"]),
+    ] + if_cuda_is_configured([
+          "cholesky_thunk.h",
+          "nvptx_executable.h"
+    ]) 
+    + if_rocm_is_configured(["amdgpu_executable.h"]),
     deps = [
         ":buffer_allocations",
         ":cudnn_conv_runner",
-        ":cusolver_context",
         ":hlo_execution_profiler",
         ":infeed_manager",
         ":ir_emission_utils",
@@ -421,6 +424,7 @@ cc_library(
         "@com_google_absl//absl/types:span",
     ]
      + if_cuda_is_configured([
+        ":cusolver_context",
         "//tensorflow/core/platform/default/build_config:cublas_plugin",
         "//tensorflow/core/platform/default/build_config:cudnn_plugin",
         "//tensorflow/core/platform/default/build_config:cufft_plugin",
@@ -571,44 +575,44 @@ tf_cc_test(
     ],
 )
 
-cc_library(
-    name = "cusolver_context",
-    srcs = ["cusolver_context.cc"],
-    hdrs = ["cusolver_context.h"],
-    deps = [
-        "//tensorflow/compiler/xla:statusor",
-        "//tensorflow/compiler/xla:types",
-        "//tensorflow/compiler/xla:util",
-        "//tensorflow/core:lib",
-        "//tensorflow/core:stream_executor_no_cuda",
-        "//tensorflow/stream_executor:blas",
-    ]
-    + if_cuda_is_configured(if_cuda([
-        "@local_config_cuda//cuda:cuda_headers",
-        "@local_config_cuda//cuda:cusolver",
-    ])),
-)
+#cc_library(
+#    name = "cusolver_context",
+#    srcs = ["cusolver_context.cc"],
+#    hdrs = ["cusolver_context.h"],
+#    deps = [
+#        "//tensorflow/compiler/xla:statusor",
+#        "//tensorflow/compiler/xla:types",
+#        "//tensorflow/compiler/xla:util",
+#        "//tensorflow/core:lib",
+#        "//tensorflow/core:stream_executor_no_cuda",
+#        "//tensorflow/stream_executor:blas",
+#    ]
+#    + if_cuda_is_configured(if_cuda([
+#        "@local_config_cuda//cuda:cuda_headers",
+#        "@local_config_cuda//cuda:cusolver",
+#    ])),
+#)
 
-cc_library(
-    name = "cusolver_rewriter",
-    srcs = ["cusolver_rewriter.cc"],
-    hdrs = ["cusolver_rewriter.h"],
-    deps = [
-        ":cusolver_context",
-        ":ir_emission_utils",
-        ":scratch_allocator",
-        "//tensorflow/compiler/xla:literal",
-        "//tensorflow/compiler/xla:util",
-        "//tensorflow/compiler/xla:xla_data_proto",
-        "//tensorflow/compiler/xla/service:device_memory_allocator",
-        "//tensorflow/compiler/xla/service:hlo",
-        "//tensorflow/compiler/xla/service:hlo_pass",
-        "//tensorflow/core:lib",
-        "//tensorflow/core:stream_executor_no_cuda",
-        "//tensorflow/stream_executor:blas",
-        "@com_google_absl//absl/types:optional",
-    ],
-)
+#cc_library(
+#    name = "cusolver_rewriter",
+#    srcs = ["cusolver_rewriter.cc"],
+#    hdrs = ["cusolver_rewriter.h"],
+#    deps = [
+#        ":cusolver_context",
+#        ":ir_emission_utils",
+#        ":scratch_allocator",
+#        "//tensorflow/compiler/xla:literal",
+#        "//tensorflow/compiler/xla:util",
+#        "//tensorflow/compiler/xla:xla_data_proto",
+#        "//tensorflow/compiler/xla/service:device_memory_allocator",
+#        "//tensorflow/compiler/xla/service:hlo",
+#        "//tensorflow/compiler/xla/service:hlo_pass",
+#        "//tensorflow/core:lib",
+#        "//tensorflow/core:stream_executor_no_cuda",
+#        "//tensorflow/stream_executor:blas",
+#        "@com_google_absl//absl/types:optional",
+#    ],
+#)
 
 cc_library(
     name = "instruction_fusion",
@@ -817,7 +821,7 @@ cc_library(
     hdrs = ["gpu_transfer_manager.h"],
     deps = [
         ":infeed_manager",
-        ":nvptx_compiler",
+        ":gpu_compiler",
         ":outfeed_manager",
         "//tensorflow/compiler/xla:literal",
         "//tensorflow/compiler/xla:literal_util",
@@ -834,7 +838,7 @@ cc_library(
         "//tensorflow/core:stream_executor_no_cuda",
         "@com_google_absl//absl/memory",
         "@llvm//:core",
-    ],
+    ], 
     alwayslink = True,  # Contains per-platform transfer manager registration
 )
 
@@ -842,14 +846,17 @@ cc_library(
     name = "gpu_compiler",
     srcs = if_cuda_is_configured(["nvptx_compiler.cc"]) 
            + if_rocm_is_configured(["amdgpu_compiler.cc"]),
-    hdrs = if_cuda_is_configured(["nvptx_compiler.h"]) 
+    hdrs = [
+             "cudnn_batchnorm_rewriter.h",
+           ]
+           +if_cuda_is_configured(["nvptx_compiler.h"]) 
            + if_rocm_is_configured(["amdgpu_compiler.h"]),
     deps = [
+        ":cudnn_batchnorm_rewriter",
         ":cudnn_conv_pad_for_tensor_cores",
         ":cudnn_conv_padding_legalization",
         ":cudnn_conv_rewriter",
         ":cudnn_fused_conv_rewriter",
-        ":cusolver_rewriter",
         ":fusion_merger",
         ":gpu_constants",
         ":gpu_copy_insertion",
@@ -919,9 +926,11 @@ cc_library(
         "@com_google_absl//absl/types:span",
         "@llvm//:core",
     ]+
-    if_cuda_is_configured([":cuda_conv_algorithm_picker", 
-                           "//tensorflow/core:cuda_libdevice_path",
-                           "//tensorflow/stream_executor/cuda:cuda_diagnostics",
+    if_cuda_is_configured([
+        ":cusolver_rewriter",
+        ":cuda_conv_algorithm_picker", 
+        "//tensorflow/core:cuda_libdevice_path",
+        "//tensorflow/stream_executor/cuda:cuda_diagnostics",
     ])
     + if_rocm_is_configured([":miopen_conv_algorithm_picker",
                             "//tensorflow/core:rocm_rocdl_path",]),

@@ -51,8 +51,8 @@ class GpuExecutable : public Executable {
  public:
   // cubin (i.e. the compiled ptx) may be empty, in which case we leave
   // compilation up to the GPU driver.
-  GpuExecutable(const string& ptx, const std::vector<uint8>& cubin,
-                std::pair<int, int> compute_capability,
+  GpuExecutable(const string& text, const std::vector<uint8>& binary,
+//                std::pair<int, int> compute_capability,
                 std::unique_ptr<const ThunkSchedule> thunk_schedule,
                 std::unique_ptr<HloModule> hlo_module,
                 std::unique_ptr<const BufferAssignment> assignment,
@@ -68,11 +68,11 @@ class GpuExecutable : public Executable {
   }
 
   // Returns the compiled PTX for the computation.
-  const string& ptx() const { return ptx_; }
+  const string& text() const { return text_; }
 
   // Returns the cubin (compiled PTX) stored in this GpuExecutable.  May be
   // empty, in which case compilation is left up to the GPU driver.
-  const std::vector<uint8>& cubin() const { return cubin_; }
+  const std::vector<uint8>& binary() const { return binary_; }
 
   // ExecuteOnStream will fail if the compute capability of the stream doesn't
   // match the compute capability passed to this object's constructor.
@@ -118,13 +118,13 @@ class GpuExecutable : public Executable {
   string ir_module_string_;
 
   // The PTX for the computation.
-  const string ptx_;
+  const string text_;
 
   // The GPU machine code for the computation, targeting GPUs at
   // compute_capability_.
   //
   // May be empty, in which case we leave compilation up to the GPU driver.
-  const std::vector<uint8> cubin_;
+  const std::vector<uint8> binary_;
 
   // The compute capability of the GPU we're targeting with this GpuExecutable.
   std::pair<int, int> compute_capability_;

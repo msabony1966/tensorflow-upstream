@@ -38,4 +38,6 @@ bazel test --config=rocm --test_tag_filters=-no_gpu,-benchmark-test,-no_oss -k \
     --jobs=${N_JOBS} --test_timeout 300,450,1200,3600 \
     --build_tests_only --test_output=errors --local_test_jobs=1 \
     --config=xla -- \
-    //tensorflow/compiler/...
+    //tensorflow/compiler/... \
+    -//tensorflow/compiler/tests:unary_ops_test_cpu \
+    -//tensorflow/compiler/xla/tests:unary_op_test_cpu
