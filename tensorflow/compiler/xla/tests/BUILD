@@ -2116,7 +2116,7 @@ tf_cc_test(
     name = "sample_file_test",
     srcs = ["sample_file_test.cc"],
     data = ["isolated_convolution.hlo"],
-    tags = tf_cuda_tests_tags(),
+  #  tags = tf_cuda_tests_tags(),
     deps = [
         ":hlo_test_base",
         "//tensorflow/compiler/xla:test",

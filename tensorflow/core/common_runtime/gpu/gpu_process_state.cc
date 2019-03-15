@@ -173,7 +173,7 @@ SharedCounter* GPUProcessState::GPUAllocatorCounter(TfGpuId tf_gpu_id) {
   return allocator_parts.counter.get();
 #else
   return nullptr;
-#endif // GOOGLE_CUDA 
+#endif // GOOGLE_CUDA
 }
 
 Allocator* GPUProcessState::GetGPUHostAllocator(int numa_node) {
@@ -293,7 +293,7 @@ void GPUProcessState::AddGPUHostAllocVisitor(
   mutex_lock lock(mu_);
   CHECK(gpu_host_allocators_.empty())  // Crash OK
       << "AddGPUHostAllocVisitor must be called before "
-         "first call to GetCUDAHostAllocator.";
+         "first call to GetGPUHostAllocator.";
   while (numa_node >= static_cast<int64>(gpu_host_alloc_visitors_.size())) {
     gpu_host_alloc_visitors_.push_back(std::vector<SubAllocator::Visitor>());
   }
@@ -306,13 +306,13 @@ void GPUProcessState::AddGPUHostFreeVisitor(
 #if GOOGLE_CUDA || TENSORFLOW_USE_ROCM
   mutex_lock lock(mu_);
   CHECK(gpu_host_allocators_.empty())  // Crash OK
-      << "AddCUDAHostFreeVisitor must be called before "
-         "first call to GetCUDAHostAllocator.";
+      << "AddGPUHostFreeVisitor must be called before "
+         "first call to GetGPUHostAllocator.";
   while (numa_node >= static_cast<int64>(gpu_host_free_visitors_.size())) {
     gpu_host_free_visitors_.push_back(std::vector<SubAllocator::Visitor>());
   }
   gpu_host_free_visitors_[numa_node].push_back(visitor);
-#endif  // GOOGLE_CUDA
+#endif  // GOOGLE_CUDA || TENSORFLOW_USE_ROCM
 }
 
 void GPUProcessState::TestOnlyReset() {

@@ -14,7 +14,7 @@ limitations under the License.
 ==============================================================================*/
 
 // Registers the XLA_GPU device, which is an XlaDevice instantiation that runs
-// operators using XLA via the XLA "CUDA" (GPU) backend.
+// operators using XLA via the XLA "CUDA" or "ROCM" (GPU) backend.
 
 #include <set>
 #include "absl/memory/memory.h"
