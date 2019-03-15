@@ -41,6 +41,6 @@ message CudnnConvBackendConfig {
 
 
   // The amount of workspace memory required in bytes.
-  int64 scratch_size = 6;
+  int64 scratch_size = 100;
 
 }

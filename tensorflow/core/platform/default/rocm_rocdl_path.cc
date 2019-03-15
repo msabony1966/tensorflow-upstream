@@ -15,13 +15,18 @@ limitations under the License.
 
 #include "tensorflow/core/platform/rocm_rocdl_path.h"
 
-#include "tensorflow/core/lib/io/path.h"
+#include <stdlib.h>
+
+#if !defined(PLATFORM_GOOGLE)
+#include "rocm/rocm_config.h"
+#endif
+#include "tensorflow/core/platform/logging.h"
 
 namespace tensorflow {
 
 string ROCmRoot() {
-  return tensorflow::io::JoinPath(tensorflow::ROCmRoot(), "hcc/lib");
+  VLOG(3) << "ROCM root = " << TF_ROCM_TOOLKIT_PATH;
+  return TF_ROCM_TOOLKIT_PATH;
 }
 
 }  // namespace tensorflow
-

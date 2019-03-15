@@ -46,6 +46,7 @@ AMDGPUExecutable::AMDGPUExecutable(
     std::unique_ptr<HloProfilePrinterData> hlo_profile_printer_data,
     std::unique_ptr<HloProfileIndexMap> hlo_profile_index_map)
     : GpuExecutable(std::move(text), std::move(binary),
+                    {isa_version, isa_version},
                     std::move(thunk_schedule),
                     std::move(hlo_module), std::move(assignment),
                     std::move(hlo_profile_printer_data),

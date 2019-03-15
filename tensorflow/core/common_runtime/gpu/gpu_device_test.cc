@@ -343,4 +343,4 @@ TEST_F(GPUKernelTrackerTest, basic) {
 
 }  // namespace tensorflow
 
-#endif
+//#endif

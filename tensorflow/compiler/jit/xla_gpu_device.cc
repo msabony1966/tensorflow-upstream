@@ -73,7 +73,7 @@ Status XlaGpuDeviceFactory::CreateDevices(
       RegisterXlaDeviceKernels(DEVICE_XLA_GPU, DEVICE_GPU_XLA_JIT);
   (void)registrations;
 
-  auto platform = se::MultiPlatformManager::PlatformWithName("CUDA");
+  auto platform = se::MultiPlatformManager::PlatformWithName("ROCM");
   if (!platform.ok()) {
     // Treat failures as non-fatal; there might not be a GPU in the machine.
     VLOG(1) << "Failed to create XLA_GPU device: " << platform.status();

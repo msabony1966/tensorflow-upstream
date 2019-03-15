@@ -23,10 +23,10 @@ limitations under the License.
 namespace tensorflow {
 // Allocator for pinned CPU RAM that is made known to GPU for the
 // purpose of efficient DMA with a GPU.
-class GpuHostAllocator : public SubAllocator {
+class GPUHostAllocator : public SubAllocator {
  public:
   // Note: stream_exec cannot be null.
-  explicit GpuHostAllocator(se::StreamExecutor* stream_exec, int numa_node,
+  explicit GPUHostAllocator(se::StreamExecutor* stream_exec, int numa_node,
                             const std::vector<Visitor>& alloc_visitors,
                             const std::vector<Visitor>& free_visitors)
       : SubAllocator(alloc_visitors, free_visitors),
@@ -34,7 +34,7 @@ class GpuHostAllocator : public SubAllocator {
         numa_node_(numa_node) {
     CHECK(stream_exec_ != nullptr);
   }
-  ~GpuHostAllocator() override {}
+  ~GPUHostAllocator() override {}
 
   void* Alloc(size_t alignment, size_t num_bytes) override {
     void* ptr = nullptr;
@@ -61,7 +61,7 @@ class GpuHostAllocator : public SubAllocator {
   se::StreamExecutor* stream_exec_;  // not owned, non-null
   const int numa_node_;
 
-  TF_DISALLOW_COPY_AND_ASSIGN(GpuHostAllocator);
+  TF_DISALLOW_COPY_AND_ASSIGN(GPUHostAllocator);
 };
 
 }  // namespace tensorflow

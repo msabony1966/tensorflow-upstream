@@ -49,7 +49,7 @@ using tensorflow::tracing::ScopedAnnotation;
 // since we can use timers around thunks.
 GpuExecutable::GpuExecutable(
     const string& text, const std::vector<uint8>& binary,
-//    std::pair<int, int> compute_capability,
+    std::pair<int, int> compute_capability,
     std::unique_ptr<const ThunkSchedule> thunk_schedule,
     std::unique_ptr<HloModule> hlo_module,
     std::unique_ptr<const BufferAssignment> assignment,
@@ -59,7 +59,7 @@ GpuExecutable::GpuExecutable(
                  std::move(hlo_profile_index_map)),
       text_(text),
       binary_(binary),
-      //compute_capability_(compute_capability),
+      compute_capability_(compute_capability),
       thunk_schedule_(std::move(thunk_schedule)),
       assignment_(std::move(assignment)) {}
 
@@ -70,7 +70,7 @@ Status GpuExecutable::ExecuteThunks(
   se::Stream* main_stream = run_options->stream();
   se::StreamExecutor* executor = main_stream->parent();
 
-#if 0 
+#if !TENSRORFLOW_USE_ROCM 
   std::pair<int, int> stream_compute_compatibility;
   executor->GetDeviceDescription().cuda_compute_capability(
       &stream_compute_compatibility.first,

@@ -502,7 +502,9 @@ cc_library(
         ":backend_configs",
         ":buffer_comparator",
         ":cudnn_conv_runner",
+        ":gpu_autotuning_proto",
         ":gpu_executable",
+         ":scratch_allocator",
         ":ir_emission_utils",
         "//tensorflow/compiler/xla:literal_util",
         "//tensorflow/compiler/xla/service:compiler",
@@ -575,44 +577,50 @@ tf_cc_test(
     ],
 )
 
-#cc_library(
-#    name = "cusolver_context",
-#    srcs = ["cusolver_context.cc"],
-#    hdrs = ["cusolver_context.h"],
-#    deps = [
-#        "//tensorflow/compiler/xla:statusor",
-#        "//tensorflow/compiler/xla:types",
-#        "//tensorflow/compiler/xla:util",
-#        "//tensorflow/core:lib",
-#        "//tensorflow/core:stream_executor_no_cuda",
-#        "//tensorflow/stream_executor:blas",
-#    ]
-#    + if_cuda_is_configured(if_cuda([
-#        "@local_config_cuda//cuda:cuda_headers",
-#        "@local_config_cuda//cuda:cusolver",
-#    ])),
-#)
+cc_library(
+    name = "cusolver_context",
+    srcs = if_cuda_is_configured([
+           "cusolver_context.cc"
+           ]),
+    hdrs = if_cuda_is_configured([
+          "cusolver_context.h"
+       ]),
+    deps =  if_cuda_is_configured([
+             "//tensorflow/compiler/xla:statusor",
+             "//tensorflow/compiler/xla:types",
+             "//tensorflow/compiler/xla:util",
+             "//tensorflow/core:lib",
+             "//tensorflow/core:stream_executor_no_cuda",
+              "//tensorflow/stream_executor:blas",
+              "@local_config_cuda//cuda:cuda_headers",
+              "@local_config_cuda//cuda:cusolver",
+     ]),
+)
 
-#cc_library(
-#    name = "cusolver_rewriter",
-#    srcs = ["cusolver_rewriter.cc"],
-#    hdrs = ["cusolver_rewriter.h"],
-#    deps = [
-#        ":cusolver_context",
-#        ":ir_emission_utils",
-#        ":scratch_allocator",
-#        "//tensorflow/compiler/xla:literal",
-#        "//tensorflow/compiler/xla:util",
-#        "//tensorflow/compiler/xla:xla_data_proto",
-#        "//tensorflow/compiler/xla/service:device_memory_allocator",
-#        "//tensorflow/compiler/xla/service:hlo",
-#        "//tensorflow/compiler/xla/service:hlo_pass",
-#        "//tensorflow/core:lib",
-#        "//tensorflow/core:stream_executor_no_cuda",
-#        "//tensorflow/stream_executor:blas",
-#        "@com_google_absl//absl/types:optional",
-#    ],
-#)
+cc_library(
+    name = "cusolver_rewriter",
+    srcs = if_cuda_is_configured([
+             "cusolver_rewriter.cc"
+     ]),
+    hdrs = if_cuda_is_configured([
+          "cusolver_context.h"
+       ]),
+    deps =  if_cuda_is_configured([
+             ":cusolver_context",
+             ":ir_emission_utils",
+             ":scratch_allocator",
+             "//tensorflow/compiler/xla:literal",
+             "//tensorflow/compiler/xla:util",
+             "//tensorflow/compiler/xla:xla_data_proto",
+             "//tensorflow/compiler/xla/service:device_memory_allocator",
+             "//tensorflow/compiler/xla/service:hlo",
+             "//tensorflow/compiler/xla/service:hlo_pass",
+             "//tensorflow/core:lib",
+             "//tensorflow/core:stream_executor_no_cuda",
+             "//tensorflow/stream_executor:blas",
+              "@com_google_absl//absl/types:optional",
+      ]),
+)
 
 cc_library(
     name = "instruction_fusion",
@@ -847,7 +855,6 @@ cc_library(
     srcs = if_cuda_is_configured(["nvptx_compiler.cc"]) 
            + if_rocm_is_configured(["amdgpu_compiler.cc"]),
     hdrs = [
-             "cudnn_batchnorm_rewriter.h",
            ]
            +if_cuda_is_configured(["nvptx_compiler.h"]) 
            + if_rocm_is_configured(["amdgpu_compiler.h"]),

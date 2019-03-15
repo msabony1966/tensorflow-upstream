@@ -52,7 +52,7 @@ class GpuExecutable : public Executable {
   // cubin (i.e. the compiled ptx) may be empty, in which case we leave
   // compilation up to the GPU driver.
   GpuExecutable(const string& text, const std::vector<uint8>& binary,
-//                std::pair<int, int> compute_capability,
+                std::pair<int, int> compute_capability,
                 std::unique_ptr<const ThunkSchedule> thunk_schedule,
                 std::unique_ptr<HloModule> hlo_module,
                 std::unique_ptr<const BufferAssignment> assignment,

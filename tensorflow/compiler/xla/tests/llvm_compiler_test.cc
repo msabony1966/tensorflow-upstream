@@ -18,7 +18,7 @@ limitations under the License.
 #include "tensorflow/compiler/xla/literal_util.h"
 #include "tensorflow/compiler/xla/service/backend.h"
 #include "tensorflow/compiler/xla/service/cpu/cpu_compiler.h"
-#if GOOGLE_CUDA
+#if !TENSORFLOW_USE_ROCM
  #include "tensorflow/compiler/xla/service/gpu/nvptx_compiler.h"
 #elif TENSORFLOW_USE_ROCM
  #include "tensorflow/compiler/xla/service/gpu/amdgpu_compiler.h"
@@ -142,7 +142,7 @@ class CpuCompilerTest : public LLVMCompilerTest {
 
 class GpuCompilerTest : public LLVMCompilerTest {
  public:
-#if GOOGLE_CUDA
+#if !TENSORFLOW_USE_ROCM
   GpuCompilerTest() : LLVMCompilerTest("CUDA") {}
 #elif TENSORFLOW_USE_ROCM
   GpuCompilerTest() : LLVMCompilerTest("ROCM") {}
@@ -155,7 +155,7 @@ TEST_F(CpuCompilerTest, HooksTest) {
 }
 
 TEST_F(GpuCompilerTest, HooksTest) {
-#if GOOGLE_CUDA
+#if !TENSORFLOW_USE_ROCM
   gpu::NVPTXCompiler compiler;
 #elif TENSORFLOW_USE_ROCM
   gpu::AMDGPUCompiler compiler;

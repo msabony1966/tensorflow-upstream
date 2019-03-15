@@ -183,9 +183,7 @@ Status GpuTransferManager::TransferLiteralFromOutfeed(
 }  // namespace xla
 
 
-#if 0 
-
-PTX code 
+#if !TENSORFLOW_USE_ROCM
 static std::unique_ptr<xla::TransferManager> CreateNVPTXTransferManager() {
   return absl::make_unique<xla::gpu::GpuTransferManager>(
       /*id=*/stream_executor::cuda::kCudaPlatformId,
