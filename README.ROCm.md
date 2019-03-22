@@ -19,4 +19,3 @@ For details on installation and usage, see these links:
 ## Technical details ##
 * [Overview of ROCm port](rocm_docs/rocm-port-overview.md)
 * [List of supported operators on ROCm](rocm_docs/core_kernels.md)
-
