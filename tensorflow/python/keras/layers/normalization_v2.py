@@ -12,25 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+"""The V2 implementation of Normalization layers.
 """
-Bring in all of the public TensorFlow interface into this module (virtual pip).
-"""
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 
-from __future__ import absolute_import as _absolute_import
-from __future__ import division as _division
-from __future__ import print_function as _print_function
+from tensorflow.python.keras.layers.normalization import BatchNormalizationBase
+from tensorflow.python.util.tf_export import keras_export
 
-try:
-  from tensorflow_core import *
-  # These need to be explicitly imported
-  from tensorflow_core import __path__ as _new_path
-  from tensorflow_core import keras
-  __path__ = __path__ + _new_path
-except ImportError as e:
-  pass
 
-try:
-  from tensorflow_estimator import __path__ as _new_path
-  __path__ = __path__ + _new_path
-except ImportError as e:
-  pass
+@keras_export('keras.layers.BatchNormalization', v1=[])  # pylint: disable=missing-docstring
+class BatchNormalization(BatchNormalizationBase):
+
+  _USE_V2_BEHAVIOR = True
